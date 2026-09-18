@@ -205,8 +205,8 @@ def interpret(ask: str, bands=None, analysis=None, model: str | None = None,
     key = api_key or _load_env_key()
     if not key:
         raise EqChatError(
-            "No OPENROUTER_API_KEY. Put it in the environment or in "
-            "print-shop/.env, the same key the rest of the shop uses.")
+            "No OPENROUTER_API_KEY. Export it, or put it in a .env beside "
+            "the code (git-ignored). See the README.")
 
     user = f"{_context(bands, analysis)}\n\nRequest: {ask}"
     body = json.dumps({

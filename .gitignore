@@ -8,3 +8,15 @@ player/scope.html
 # untracked and two subagents had already deleted work here; git history is
 # the better version of that guarantee, so it does not travel into the repo.
 studio/.attic/
+
+.env
+# Secrets. `.env` holds OPENROUTER_API_KEY and nothing else needs to be here.
+# The globs are deliberate: a key that lands in `.env.local` or a stray
+# `*.key` is the same secret wearing a different name, and the point of this
+# rule is that no variant reaches a commit. `.env.example` is the exception —
+# it carries names, never values.
+.env.*
+!.env.example
+*.key
+*.pem
+service-account*.json

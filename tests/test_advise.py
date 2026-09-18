@@ -10,6 +10,9 @@ being copied into consumers.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+from pathlib import Path
 import unittest
 
 import advise
@@ -121,6 +124,73 @@ class TestKeyHandling(unittest.TestCase):
         message = str(ctx.exception)
         self.assertIn("OPENROUTER_API_KEY", message)
         self.assertIn(".env", message)
+
+
+class TestKeyLookup(unittest.TestCase):
+    """Where the key is read FROM.
+
+    This exists because the extraction of this code into its own repository
+    broke exactly that, and nothing noticed. `_load_env_key` walked up to
+    `parents[2]/print-shop/.env`, which resolved correctly only while the code
+    sat inside the atlas-city-press tree; afterwards it pointed at a directory
+    that does not exist. Every AI feature went keyless, and because a missing
+    key is a warning rather than an error, the failure was silent.
+
+    The existing tests all stubbed `_load_env_key` out, so none of them could
+    have caught it. These check the lookup itself.
+    """
+
+    def setUp(self):
+        self._saved = {k: os.environ.get(k)
+                       for k in ("OPENROUTER_API_KEY", "MUSIC_STUDIO_ENV")}
+        for k in self._saved:
+            os.environ.pop(k, None)
+
+    def tearDown(self):
+        for k, v in self._saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def test_env_file_lives_inside_this_repo(self):
+        """The regression itself: no path may climb out of the package."""
+        here = Path(advise.__file__).resolve().parent
+        self.assertEqual(advise.env_path().parent, here)
+
+    def test_env_file_is_dot_env(self):
+        self.assertEqual(advise.env_path().name, ".env")
+
+    def test_override_redirects_the_lookup(self):
+        os.environ["MUSIC_STUDIO_ENV"] = "/tmp/somewhere/else.env"
+        self.assertEqual(advise.env_path(), Path("/tmp/somewhere/else.env"))
+
+    def test_environment_beats_the_file(self):
+        """An exported key must win, so CI never needs a file on disk."""
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Path(tmp) / ".env"
+            env.write_text("OPENROUTER_API_KEY=from-the-file\n")
+            os.environ["MUSIC_STUDIO_ENV"] = str(env)
+            os.environ["OPENROUTER_API_KEY"] = "from-the-environment"
+            self.assertEqual(advise._load_env_key(), "from-the-environment")
+
+    def test_reads_the_file_when_the_environment_is_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Path(tmp) / ".env"
+            env.write_text("# a comment\nOTHER=1\nOPENROUTER_API_KEY=sk-or-v1-xyz\n")
+            os.environ["MUSIC_STUDIO_ENV"] = str(env)
+            self.assertEqual(advise._load_env_key(), "sk-or-v1-xyz")
+
+    def test_quotes_are_stripped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Path(tmp) / ".env"
+            env.write_text('OPENROUTER_API_KEY="sk-or-v1-quoted"\n')
+            os.environ["MUSIC_STUDIO_ENV"] = str(env)
+            self.assertEqual(advise._load_env_key(), "sk-or-v1-quoted")
+
+    def test_missing_file_is_not_an_error(self):
+        os.environ["MUSIC_STUDIO_ENV"] = "/nonexistent/nowhere/.env"
+        self.assertIsNone(advise._load_env_key())
 
 
 if __name__ == "__main__":

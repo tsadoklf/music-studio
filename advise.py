@@ -16,8 +16,9 @@ Two rules shape the prompt, both learned the hard way on this repo:
   * It recommends commands; it never runs them. Mastering is destructive enough
     that the decision stays with a person.
 
-Uses OpenRouter, like print-shop/viewer/feedback.py, and the stdlib only.
-Needs OPENROUTER_API_KEY in the environment or in print-shop/.env.
+Uses OpenRouter and the stdlib only.
+Needs OPENROUTER_API_KEY in the environment, or in a .env beside this file
+(git-ignored). MUSIC_STUDIO_ENV points at that file if it lives elsewhere.
 """
 
 from __future__ import annotations
@@ -91,15 +92,39 @@ class AdviseError(RuntimeError):
     """Anything that should stop the run with a readable message."""
 
 
-def _load_env_key() -> str | None:
-    """Read OPENROUTER_API_KEY from the environment, else print-shop/.env.
+def env_path() -> Path:
+    """Where this repo keeps its secrets: a .env beside the code.
 
-    The key lives in one place in this repo and nothing else should copy it.
+    MUSIC_STUDIO_ENV overrides it, which is what an installed copy or a test
+    needs — once this is a package, the module's own location stops being a
+    sensible guess about where a user's configuration lives.
+    """
+    override = os.environ.get("MUSIC_STUDIO_ENV")
+    if override:
+        return Path(override).expanduser()
+    return Path(__file__).resolve().parent / ".env"
+
+
+def _load_env_key() -> str | None:
+    """Read OPENROUTER_API_KEY from the environment, else this repo's .env.
+
+    THE ENVIRONMENT WINS. An exported variable overrides the file, so a shell
+    or a CI job can supply the key without anything being written to disk.
+
+    This used to walk up to `parents[2]/print-shop/.env`, which resolved
+    correctly only while this code lived inside the atlas-city-press tree.
+    After the extraction it pointed at a directory that does not exist, and
+    because a missing key is a warning rather than an error, every AI feature
+    went quietly keyless: advice, the EQ chat and the timeline commentary all
+    degraded with nothing on screen to say why.
+
+    A relative walk into a sibling repository is the assumption that broke, so
+    it is gone rather than repaired. Nothing here reaches outside this repo.
     """
     key = os.environ.get("OPENROUTER_API_KEY")
     if key:
         return key.strip()
-    env = Path(__file__).resolve().parents[2] / "print-shop" / ".env"
+    env = env_path()
     if not env.is_file():
         return None
     for line in env.read_text(encoding="utf-8").splitlines():
@@ -158,8 +183,8 @@ def advise(analysis: dict, question: str | None = None,
     key = api_key or _load_env_key()
     if not key:
         raise AdviseError(
-            "No OPENROUTER_API_KEY. Put it in the environment or in "
-            "print-shop/.env, the same key viewer/feedback.py uses."
+            "No OPENROUTER_API_KEY. Export it, or put it in a .env beside "
+            "the code (git-ignored). See the README."
         )
 
     ask = question or (

@@ -120,7 +120,18 @@ anything else later without `sys.path` surgery.
 Each phase ends green — tests passing, page loading — so a failure names its
 own cause. **Do not start a phase before the previous one is verified.**
 
-### Phase 0 — fix what the move broke (do this first, it is a live bug)
+### Phase 0 — fix what the move broke — **DONE**
+
+Shipped in #2. The lookup now reads `.env` beside the code, with the
+environment taking precedence and `MUSIC_STUDIO_ENV` as an override; nothing
+reaches outside the repo. Seven tests in `TestKeyLookup` guard it, verified by
+reintroducing the bug and watching them fail. Confirmed live: `advise` and
+`eqchat` both answer again.
+
+The original description follows, for the record.
+
+---
+
 
 `advise.py` reads the API key from
 `Path(__file__).resolve().parents[2] / "print-shop" / ".env"`. That resolved
@@ -247,7 +258,7 @@ tests and visible only on screen.
 
 | Phase | What | State |
 |---|---|---|
-| 0 | API key lookup no longer walks into a sibling repo | not started |
+| 0 | API key lookup no longer walks into a sibling repo | **done** (#2) |
 | 1 | `paths.py`; `song-template.md` settled | not started |
 | 2 | `src/` layout, `pyproject.toml`, `music` entry point | not started |
 | 3 | thin `cli.py` | not started |

@@ -30,6 +30,21 @@ Python **3.12** or newer, with ffmpeg and ffprobe on PATH. The page also opens
 by double-clicking `studio/index.html` — it just cannot run commands then,
 which it says on screen.
 
+### The one secret
+
+Three features call OpenRouter: the advice pane, the EQ chat, and the
+timeline commentary. Everything else — measurement, mastering, the maximizer,
+the meters — is ffmpeg and arithmetic and needs no key at all, so the studio
+is fully usable without one.
+
+```sh
+cp .env.example .env        # then paste your key in; .env is git-ignored
+```
+
+The environment wins over the file, so `export OPENROUTER_API_KEY=...` works
+instead and CI never needs a file on disk. `MUSIC_STUDIO_ENV` points at the
+file if it lives somewhere else.
+
 ### Pointing it at the music
 
 Nothing here hardcodes a path to the audio; `--root` and the file arguments

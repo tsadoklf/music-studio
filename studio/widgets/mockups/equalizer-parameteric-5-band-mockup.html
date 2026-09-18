@@ -1,0 +1,219 @@
+<!-- Screwed / rack-mounted Equalizer — markup -->
+<div class="unit unit--striped ru ru--eq ru--screwed">
+      <span class="rail-groove rail-groove--l"></span><span class="rail-groove rail-groove--r"></span><span class="screw screw--tl"></span><span class="screw screw--tr"></span><span class="screw screw--bl"></span><span class="screw screw--br"></span>
+      <div class="ru-ear"><button type="button" class="eq-band-power is-on"><span class="eq-band-lamp"></span></button><span class="ru-name">Equalizer</span></div>
+      <div class="ru-body ru-body--eq">
+        <div class="eqm">
+          <div class="eqm-head"><span class="eqm-title">Equalizer</span><span class="unit-note" style="white-space:nowrap">5-band parametric</span><div class="seg-keys" style="margin-left:auto"><button type="button" class="eq-band-power is-on"><span class="eq-band-lamp"></span><span class="eq-band-power-text">On</span></button><button type="button" class="eq-band-power"><span class="eq-band-lamp"></span><span class="eq-band-power-text">Bypass</span></button></div></div>
+          <div class="scope eq-curve eqm-scope eqm-scope--tall"><canvas data-eq="2" data-tall="1" data-h="214"></canvas></div>
+        </div>
+        <div class="eqcols">
+          <sc-for list="{{ eqCols }}" as="c" hint-placeholder-count="5">
+            <div class="eqcol eqcol--v eqcol--eq {{ c.cls }}">
+              <span class="eqcol-name eqcol-name--down">{{ c.name }} <span class="eqcol-name-num">{{ c.range }}</span></span>
+              <div class="eqcol-vbody">
+                <div class="eqcol-vtop"><button type="button" class="eq-band-power {{ c.onCls }}"><span class="eq-band-lamp"></span></button></div>
+                <div class="eqcol-knobs eqcol-knobs--floor">
+                  <sc-if value="{{ c.hasKnobs }}" hint-placeholder-val="{{ true }}">
+                    <div class="knob" style="gap:3px"><div class="knob-cap"><canvas class="knob-face" data-knob="1" data-size="40" data-min="20" data-max="20000" data-curve="log" data-val="{{ c.f }}"></canvas></div><div class="knob-label">Freq</div></div>
+                    <div class="knob" style="gap:3px"><div class="knob-cap"><canvas class="knob-face" data-knob="1" data-size="40" data-min="-18" data-max="18" data-val="{{ c.g }}"></canvas></div><div class="knob-label">Gain</div></div>
+                    <div class="knob" style="gap:3px"><div class="knob-cap"><canvas class="knob-face" data-knob="1" data-size="40" data-min="0.1" data-max="10" data-curve="log" data-val="{{ c.q }}"></canvas></div><div class="knob-label">Q</div></div>
+                  </sc-if>
+                </div>
+                <canvas class="eqcol-glyph" data-glyph="{{ c.glyph }}"></canvas>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+<!-- Styles used by this unit (plus studio/panel.css + studio/meters.css for .unit, .knob, .scope, .eq-band-power) -->
+<style>
+/* rack */
+.ru{display:grid;grid-template-columns:30px minmax(0,1fr);gap:0 16px;padding:12px 16px 14px 12px;align-items:center}
+.ru-ear{display:flex;flex-direction:column;align-items:center;gap:10px;align-self:stretch;border-right:1px solid var(--hairline);padding-right:10px}
+.ru-ear .eq-band-power{padding:4px 5px}
+.ru-name{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--face-engrave);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#a5a79c;text-shadow:0 -1px 0 #0c0d0b,0 1px 0 #4e5049;flex:1;text-align:center}
+.ru-body{display:flex;align-items:center;gap:22px;min-width:0}
+.knobrow{display:flex;gap:10px;align-items:flex-start}
+.seg-keys{display:flex;gap:4px}
+.ru .eq-band-power-text{font-size:9px;white-space:nowrap}
+/* screwed faceplate variant */
+.ru--screwed{position:relative;padding-left:46px;padding-right:46px;gap:0 6px;border-radius:3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 -1px 0 rgba(0,0,0,.6),0 1px 0 rgba(0,0,0,.7)}
+/* server-rack rails: a vertical strip of square cage-nut holes either side, unit ears bolt onto them */
+.ru--screwed{border-radius:0}
+.ru--screwed::before,.ru--screwed::after{content:"";position:absolute;top:-6px;bottom:-6px;width:40px;
+.ru--screwed::before{left:0;border-right:1px solid #0b0c0a;box-shadow:inset -1px 0 0 rgba(255,255,255,.05),inset 1px 0 0 rgba(255,255,255,.04),4px 0 6px -2px rgba(0,0,0,.45)}
+.ru--screwed::after{right:0;background:linear-gradient(270deg,#2a2b26,#1e1f1b 55%,#171814);border-right:0;border-left:1px solid #0b0c0a;box-shadow:inset 1px 0 0 rgba(255,255,255,.05),inset -1px 0 0 rgba(255,255,255,.04),-4px 0 6px -2px rgba(0,0,0,.45),-7px 0 0 -6px var(--hairline)}
+.ru--screwed::before{box-shadow:inset -1px 0 0 rgba(255,255,255,.05),inset 1px 0 0 rgba(255,255,255,.04),4px 0 6px -2px rgba(0,0,0,.45),7px 0 0 -6px var(--hairline)}
+.ru--screwed .ru-ear{border-right:0}
+.rail-groove{position:absolute;top:-6px;bottom:-6px;width:5px;z-index:1;background:linear-gradient(90deg,#0a0b09,#141512 45%,#0a0b09);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6)}
+.rail-groove::after{content:"";position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.07)}
+.rail-groove--l{left:40px}.rail-groove--l::after{right:-1px}
+.rail-groove--r{right:40px}.rail-groove--r::after{left:-1px}
+.ru--screwed .eqcols .eqcol:last-child{border-right:0}
+.ru--screwed .ru-ear{padding-left:0;padding-right:4px}
+.ru--screwed .ru-ear,.ru--screwed .ru-body{position:relative;z-index:1}
+.ru--screwed .eqm{padding-right:8px}
+.ru--screwed .eqm-head{grid-template-columns:auto 1fr auto;grid-template-areas:"title note keys";align-items:start;gap:0 14px}
+.ru--screwed .eqm-head .unit-note{align-self:end;padding-bottom:2px}
+.ru--screwed .eqm-head .unit-note{white-space:nowrap}
+.ru--screwed .eqm-scope--tall{height:214px}
+.ru--screwed .eqm-head .seg-keys{align-self:start;margin-top:-4px}
+.ru--screwed .eqcols{flex-basis:424px;width:424px}
+.ru--screwed .eqcol--eq{width:84px;padding:0 4px 0 6px}
+.ru--screwed .eqcol--eq.eqcol--cut{width:66px}
+.ru--screwed .eqcol--eq .eqcol-knobs--floor{gap:4px}
+.screw{position:absolute;z-index:1;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#6a6c62 0%,#3c3e37 45%,#1c1d19 100%);box-shadow:inset 0 0 0 1px #0b0c0a,0 0 0 2px #0f100d,0 0 0 3px rgba(255,255,255,.04),0 1px 2px rgba(0,0,0,.8)}
+.screw::before,.screw::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:2.4px;background:linear-gradient(90deg,#0a0b09,#141512,#0a0b09);transform:translate(-50%,-50%) rotate(var(--r,0deg));box-shadow:0 1px 0 rgba(255,255,255,.08)}
+.screw::after{--r:90deg}
+.screw--tl{left:9px;top:9px}.screw--tr{right:9px;top:9px;--r:22deg}.screw--tr::after{--r:112deg}
+.screw--bl{left:9px;bottom:9px;--r:-15deg}.screw--bl::after{--r:75deg}
+.screw--br{right:9px;bottom:9px;--r:40deg}.screw--br::after{--r:130deg}
+/* rack equalizer, restructured */
+.ru--eq{align-items:stretch}
+.ru-body--eq{align-items:stretch;gap:0}
+.eqm{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-width:0;padding-right:16px}
+.eqm-head{flex-wrap:nowrap;min-width:0;overflow:hidden}
+.eqm-head .unit-note{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.eqm-head .seg-keys{flex:0 0 auto}
+.eqm-head{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title keys" "note keys";align-items:center;gap:2px 12px}
+.eqm-head .eqm-title{grid-area:title}
+.eqm-head .unit-note{grid-area:note;overflow:visible;text-overflow:clip}
+.eqm-head .seg-keys{grid-area:keys;margin-left:0!important}
+.eqm-title{font-family:var(--face-engrave);font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:#b8b3a4;text-shadow:0 -1px 0 #0a0b09,0 1px 0 #494b43;line-height:1}
+.eqm-scope{flex:0 0 auto;height:196px;border-radius:4px;border:1px solid #050605;box-shadow:inset 0 3px 8px rgba(0,0,0,.95),inset 0 1px 0 rgba(0,0,0,.9),inset 2px 0 4px rgba(0,0,0,.6),inset -2px 0 4px rgba(0,0,0,.6),inset 0 -1px 0 rgba(255,255,255,.04),0 1px 0 rgba(255,255,255,.07),0 0 0 3px #1a1b18,0 0 0 4px #0b0c0a,0 2px 3px 4px rgba(0,0,0,.35)}
+.eqm-scope::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 22%),linear-gradient(90deg,rgba(0,0,0,.35),rgba(0,0,0,0) 6%,rgba(0,0,0,0) 94%,rgba(0,0,0,.35))}
+.eqm{padding-left:4px;padding-top:4px}
+.eqm .eqm-scope{margin:0 4px 4px 0}
+.eqm-scope canvas{display:block;width:100%}
+.eqcols{display:flex;flex:0 0 470px;width:470px;min-width:0;border-left:1px solid var(--hairline)}
+.eqcol{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;width:92px;padding:0 5px 0 7px;border-right:1px solid var(--hairline);min-width:0}
+.eqcol:last-child{border-right:0}
+.eqcol--cut{width:66px}
+.eqcol-top{display:flex;align-items:center;gap:6px;height:22px}
+.eqcol-top .eq-band-power{padding:3px 4px}
+.eqcol-range{font-family:var(--face-data);font-size:8px;letter-spacing:0;color:#6e7067;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eqcol-main{display:flex;gap:6px;flex:1 1 auto;align-items:flex-start}
+.eqcol-name{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--face-engrave);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#a5a79c;text-shadow:0 -1px 0 #0c0d0b,0 1px 0 #4e5049;white-space:nowrap;line-height:1;padding-top:2px}
+.eqcol-knobs{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1 1 auto}
+.eqcol-knobs .knob-label{font-size:8.5px}
+.eqcol-glyph{display:block;width:22px;height:14px;align-self:flex-start;margin:0 0 2px 1px}
+.eqcol.is-off .eqcol-name,.eqcol.is-off .eqcol-range{color:#5b5d55}
+.eqcol--out{width:126px}
+.eqcol--lim{width:212px}
+.eqcol-knobs--floor{justify-content:flex-end;align-self:stretch;padding-bottom:2px}
+.eqcol--center .eqcol-main{justify-content:center}
+/* vertical-title variant */
+.eqcol--v{flex-direction:row;gap:6px;align-items:stretch}
+.eqcol-name--down{writing-mode:vertical-rl;transform:none;padding-top:0;align-self:flex-start;flex:0 0 auto}
+.eqcol-vbody{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;gap:6px}
+.eqcol-vtop{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:22px}
+.eqcol-vtop .eq-band-power{padding:3px 4px;margin-left:auto}
+.eqcol-vtop .eqcol-range{flex:1 1 auto}
+.eqcol--vin{width:82px}
+.eqcol--vlim{width:184px}
+.eqcol--vout{width:110px}
+.eqcol--v.eqcol--vlim .lim-row{gap:6px}
+.eqcol--v .eqcol-knobs{align-items:center;gap:8px}
+.eqcol--v:not(.eqcol--vlim):not(.eqcol--vout):not(.eqcol--eq) .eqcol-knobs--floor{justify-content:flex-end;flex:1 1 auto}
+.eqcol--v .eqcol-vbody{position:relative}
+.eqcol--v:not(.eqcol--vlim):not(.eqcol--vout):not(.eqcol--eq){position:relative}
+.eqcol--v:not(.eqcol--vlim):not(.eqcol--vout):not(.eqcol--eq) .eqcol-name--down{position:absolute;left:7px;top:0}
+.eqcol--v:not(.eqcol--vlim):not(.eqcol--vout):not(.eqcol--eq) .eqcol-vbody{width:100%}
+.eqcol--v:not(.eqcol--vlim):not(.eqcol--vout):not(.eqcol--eq) .eqcol-knobs--floor{align-items:center}
+.eqcol--v:not(.eqcol--vlim):not(.eqcol--vout):not(.eqcol--eq) .eqcol-vtop{position:absolute;top:0;left:0;right:0;min-height:0}
+.eqcol--eq .eqcol-vbody{height:100%}
+.eqcol--eq .eqcol-knobs--floor{flex:1 1 auto;justify-content:flex-end;gap:6px}
+.eqcol--eq .eqcol-glyph{align-self:flex-start;margin:0 0 2px 0}
+.eqcol--eq.eqcol--cut{width:72px}
+.eqm-head .seg-keys{align-self:start}
+.eqm-head .seg-keys .eq-band-power,.eqcol--eq .eqcol-vtop .eq-band-power{height:17px;box-sizing:border-box}
+.eqcol--eq .eqcol-vtop{min-height:0;align-items:flex-start;justify-content:flex-end}
+.eqcol-name-num{font-family:var(--face-data);font-size:9px;letter-spacing:.04em;color:#6e7067;text-transform:none;margin-top:6px}
+.eqcol.is-off .eqcol-name-num{color:#5b5d55}
+.eqcol-title{font-family:var(--face-engrave);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#5f6159;line-height:1;padding:3px 0}
+.knob-ranged{display:flex;align-items:center;gap:3px}
+.knob-end{font-family:var(--face-data);font-size:8.5px;color:#6e7067;font-variant-numeric:tabular-nums;align-self:flex-end;padding-bottom:4px}
+.eqcol--center .eqcol-knobs{flex:0 0 auto}
+.eqcol-main{align-self:stretch}
+.eqcol--lim .eqcol-main,.eqcol--out .eqcol-main{align-items:stretch}
+.eqcol--lim .eqcol-top .eq-band-power{padding:3px 6px 3px 5px}
+.seg-keys--stack{flex-direction:column;gap:4px;align-items:stretch}
+.seg-keys--stack .eq-band-power{justify-content:flex-start}
+.eqcol-sub{font-family:var(--face-engrave);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#6e7067;margin-top:2px}
+.eqcol-knobs{gap:6px}
+.eqcol .eq-band-power-text{white-space:nowrap}
+.eq-band-type{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#8b8d83 50%),linear-gradient(135deg,#8b8d83 50%,transparent 50%);background-position:calc(100% - 12px) 55%,calc(100% - 7px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding:4px 22px 4px 8px;font-size:12px;color:#c3c5ba;border:1px solid #2c2e28}
+.eq-band-name{font-size:12px}
+.eq-band-fader .eq-fader{align-items:center}
+</style>
+
+<!-- Canvas draw calls this unit relies on (from the page logic): eq(cv, w, h) for canvas[data-eq] (data-h="214"), knob(...) for canvas[data-knob], glyph(cv, kind) for canvas.eqcol-glyph. Section list (eqCols) rendered via sc-for: name, range, cls, onCls, hasKnobs, f, g, q, glyph. -->
+
+<!-- Data + drawing (JS) -->
+<script>
+// section list rendered by the sc-for
+    const eqCols = [
+      { name: 'Lo cut', range: '30 Hz', glyph: 'locut', cls: 'eqcol--cut is-off', onCls: '', hasKnobs: false },
+      { name: 'Lo shelf', range: '30–400', glyph: 'loshelf', cls: '', onCls: 'is-on', hasKnobs: true, f: 110, g: 0, q: 0.7 },
+      { name: 'Param 1', range: '39–20k', glyph: 'bell', cls: '', onCls: 'is-on', hasKnobs: true, f: 260, g: 0, q: 1 },
+      { name: 'Param 2', range: '39–20k', glyph: 'bell', cls: '', onCls: 'is-on', hasKnobs: true, f: 4500, g: 0, q: 1 },
+      { name: 'Hi shelf', range: '3k–12k', glyph: 'hishelf', cls: '', onCls: 'is-on', hasKnobs: true, f: 8000, g: 0, q: 0.7 },
+    ];
+
+// helpers
+  fit(cv, w, h) {
+    const dpr = window.devicePixelRatio || 1, W = Math.round(w * dpr), H = Math.round(h * dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    cv.style.height = h + 'px';
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return ctx;
+  }
+clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+lerp(a, b, t) { return a + (b - a) * t; }
+
+  /* ---- knob.js paint ---- */
+  knob(cv) {
+    const S = +cv.dataset.size, min = +cv.dataset.min, max = +cv.dataset.max, val = +cv.dataset.val, log = cv.dataset.curve === 'log';
+    const ctx = this.fit(cv, S, S); cv.style.width = S + 'px'; ctx.clearRect(0, 0, S, S);
+    const toNorm = (v) => log ? (Math.log(v) - Math.log(min)) / (Math.log(max) - Math.log(min)) : (v - min) / (max - min);
+    const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25, cx = S / 2, cy = S / 2, rArc = S * 0.46, rCap = S * 0.335;
+    const ang = this.lerp(A0, A1, toNorm(val));
+    ctx.lineCap = 'butt'; ctx.lineWidth = Math.max(2, S * 0.055); ctx.strokeStyle = 'rgba(78,80,73,0.55)'; ctx.beginPath(); ctx.arc(cx, cy, rArc, A0, A1); ctx.stroke();
+    const rim = ctx.createLinearGradient(cx - rCap, cy - rCap, cx + rCap, cy + rCap); rim.addColorStop(0, '#6d6f66'); rim.addColorStop(0.42, '#32342f'); rim.addColorStop(1, '#141513');
+    ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(cx, cy, rCap * 1.18, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * rCap * 1.02, cy + Math.sin(a) * rCap * 1.02); ctx.lineTo(cx + Math.cos(a) * rCap * 1.18, cy + Math.sin(a) * rCap * 1.18); ctx.stroke(); }
+    ctx.restore();
+    const face = ctx.createRadialGradient(cx - rCap * 0.4, cy - rCap * 0.45, rCap * 0.05, cx, cy, rCap * 1.25); face.addColorStop(0, '#4a4c45'); face.addColorStop(0.55, '#2a2c27'); face.addColorStop(1, '#171815');
+    ctx.fillStyle = face; ctx.beginPath(); ctx.arc(cx, cy, rCap, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, rCap, 0, Math.PI * 2); ctx.stroke();
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.6, S * 0.045); ctx.strokeStyle = '#0c0d0b'; ctx.beginPath(); ctx.moveTo(cx + Math.cos(ang) * rCap * 0.18, cy + Math.sin(ang) * rCap * 0.18); ctx.lineTo(cx + Math.cos(ang) * rCap * 0.86, cy + Math.sin(ang) * rCap * 0.86); ctx.stroke();
+    ctx.lineWidth = Math.max(1, S * 0.026); ctx.strokeStyle = '#e8d5a8'; ctx.beginPath(); ctx.moveTo(cx + Math.cos(ang) * rCap * 0.2, cy + Math.sin(ang) * rCap * 0.2); ctx.lineTo(cx + Math.cos(ang) * rCap * 0.84, cy + Math.sin(ang) * rCap * 0.84); ctx.stroke(); ctx.restore();
+  }
+
+  /* ---- EQ curve (B3) ---- */
+  fToT(f) { const F0 = Math.log10(20), F1 = Math.log10(22050); return (Math.log10(this.clamp(f, 20, 22050)) - F0) / (F1 - F0); }
+  eq(cv, w, H) {
+    const ctx = this.fit(cv, w, H); ctx.fillStyle = '#07080a'; ctx.fillRect(0, 0, w, H);
+    const padB = 15, plotH = H - padB, yOf = (db) => plotH / 2 - db / 18 * (plotH / 2 - 6);
+    ctx.font = '500 9px "Spline Sans Mono", Menlo, monospace'; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+    for (const f of [50, 100, 500, 1000, 5000, 10000, 20000]) { const x = this.fToT(f) * w; ctx.fillStyle = 'rgba(78,80,73,0.35)'; ctx.fillRect(x, 0, 1, plotH); ctx.fillStyle = '#6e7067'; ctx.fillText(f >= 1000 ? f / 1000 + 'k' : String(f), this.clamp(x, 12, w - 12), plotH + 3); }
+    for (const d of [-12, -6, 0, 6, 12]) { const y = Math.round(yOf(d)) + 0.5; ctx.fillStyle = d === 0 ? 'rgba(168,137,78,0.5)' : 'rgba(78,80,73,0.22)'; ctx.fillRect(0, y, w, 1); if (H > 140 && d !== 0) { ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#5c5e56'; ctx.fillText((d > 0 ? '+' : '−') + Math.abs(d) + ' dB', 4, y - 2); } }
+    ctx.beginPath(); ctx.moveTo(0, yOf(0) + 0.5); ctx.lineTo(w, yOf(0) + 0.5); ctx.strokeStyle = '#ffcf8a'; ctx.lineWidth = 1.6; ctx.stroke();
+    [110, 260, 1200, 4500, 8000].forEach((f, i) => { const x = this.fToT(f) * w, y = yOf(0), sel = i === 2; ctx.beginPath(); ctx.arc(x, y, sel ? 6 : 5, 0, Math.PI * 2); ctx.fillStyle = sel ? '#ffb454' : '#1c1e1a'; ctx.fill(); ctx.strokeStyle = '#ffb454'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = sel ? '#ffe0ab' : '#d8b877'; ctx.textBaseline = 'bottom'; ctx.fillText(String(i + 1), x, y - 8); });
+  }
+
+  /* ---- filter-shape glyphs, engraved ---- */
+  glyph(cv, kind) {
+    const w = 22, h = 14, ctx = this.fit(cv, w, h); ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = '#9a9c92'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
+    if (kind === 'locut') { ctx.moveTo(2, 12); ctx.lineTo(8, 4); ctx.lineTo(20, 4); }
+    else if (kind === 'loshelf') { ctx.moveTo(2, 4); ctx.lineTo(8, 4); ctx.lineTo(13, 9); ctx.lineTo(20, 9); }
+    else if (kind === 'hishelf') { ctx.moveTo(2, 9); ctx.lineTo(9, 9); ctx.lineTo(14, 4); ctx.lineTo(20, 4); }
+    else if (kind === 'knee') { ctx.moveTo(2, 12); ctx.lineTo(10, 5); ctx.quadraticCurveTo(13, 2, 20, 2); }
+    else { ctx.moveTo(2, 10); ctx.quadraticCurveTo(8, 10, 11, 4); ctx.quadraticCurveTo(14, 10, 20, 10); }
+    ctx.stroke();
+  }
+</script>

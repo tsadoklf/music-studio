@@ -1,0 +1,22 @@
+# Song-shop tooling. Install into _tooling/.venv:
+#   python3.12 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
+#
+# Python 3.12 or newer. These modules use `X | None` annotations, which only
+# work on 3.9 because of `from __future__ import annotations`; 3.12 is where
+# the syntax is native and where the shop is tested.
+# ffmpeg and ffprobe must also be on PATH (macOS: brew install ffmpeg).
+
+# analysis and mastering
+soundfile>=0.12
+numpy>=1.24
+scipy>=1.10
+
+# the music CLI
+typer>=0.12
+
+# reference mastering (master.py --reference) — optional, large
+# matchering>=2.0
+
+# YouTube publishing (ytpublish.py, not yet written)
+# google-api-python-client>=2.0
+# google-auth-oauthlib>=1.0

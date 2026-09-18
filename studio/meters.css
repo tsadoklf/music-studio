@@ -1,0 +1,2317 @@
+/* ============================================================================
+   Music Studio — meter tray and the instruments it holds
+   A companion to panel.css, never a replacement: every colour here comes from
+   the custom properties that file defines, so the new cards are the same
+   faceplate as the old ones and a change to the palette reaches both.
+   ========================================================================= */
+
+/* ============================================================================
+   Shared meter chrome
+   ========================================================================= */
+
+.meter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* the control strip above a scope: a selector or two, then a status read */
+.meter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.meter-status {
+  font-family: var(--face-data);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #6e7067;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  text-align: right;
+}
+
+.meter-status.is-flag { color: var(--warn); }
+
+.meter-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: #6e7067;
+}
+
+.meter-legend-note { color: #56584f; font-style: normal; }
+
+/* a legend key: a short rule in the trace's own colour */
+.meter-legend .key {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 1px;
+  background: #6e7067;
+}
+
+.meter-legend .key--ok    { background: var(--ok); }
+.meter-legend .key--warn  { background: var(--warn); }
+.meter-legend .key--bad   { background: var(--bad); }
+.meter-legend .key--crest { background: var(--lamp); }
+.meter-legend .key--lra   { background: #7fb0c9; }
+
+.meter-legend .key--band {
+  height: 9px;
+  border-radius: 1px;
+  background: rgba(111, 159, 114, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(111, 159, 114, 0.5);
+}
+
+.meter-error {
+  margin: 0;
+  font-family: var(--face-data);
+  font-size: 12px;
+  color: var(--bad);
+}
+
+/* The scope well matches panel.css's own `.scope`; repeated here only for the
+   square variant the goniometer needs, which must not stretch. */
+.scope--square {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  max-width: 280px;
+}
+
+.scope--square canvas {
+  width: auto;
+  max-width: 100%;
+}
+
+/* ============================================================================
+   A faceplate <select> — a milled selector switch, not a browser dropdown
+   ========================================================================= */
+
+.faceplate-select {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: var(--face-engrave);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c3c5ba;
+  background:
+    /* the chevron, drawn as two gradients so no icon font is needed */
+    linear-gradient(45deg, transparent 50%, #8b8d83 50%) calc(100% - 14px) 52% / 5px 5px no-repeat,
+    linear-gradient(135deg, #8b8d83 50%, transparent 50%) calc(100% - 9px) 52% / 5px 5px no-repeat,
+    linear-gradient(180deg, #3a3c36 0%, #262823 52%, #1c1e1a 100%);
+  border: 1px solid #101109;
+  border-radius: 3px;
+  padding: 8px 30px 8px 12px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 #55574f,
+    inset 0 -2px 3px #0c0d0b,
+    0 2px 4px -1px #000;
+}
+
+.faceplate-select:hover { color: var(--gold-lit); }
+
+.faceplate-select:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.faceplate-select--small { font-size: 12px; padding-block: 7px; }
+
+/* The popup list is painted by the OS; only its own colours are ours to set,
+   and only in the browsers that honour them. */
+.faceplate-select option {
+  background: #1c1e1a;
+  color: #c3c5ba;
+  font-family: var(--face-text);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ============================================================================
+   Goniometer
+   ========================================================================= */
+
+.gonio {
+  display: flex;
+  gap: clamp(12px, 2.2vw, 22px);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.gonio-side {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gonio-read {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  background: #121311;
+  border: 1px solid #101109;
+  border-left: 3px solid #3a3c35;
+  border-radius: 3px;
+  padding: 8px 11px;
+}
+
+.gonio-read .k {
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #74766d;
+}
+
+.gonio-read .v {
+  font-family: var(--face-data);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lamp);
+  text-shadow: 0 0 10px rgba(255, 180, 84, 0.28);
+}
+
+.gonio-read .v.is-ok   { color: var(--ok);   text-shadow: none; }
+.gonio-read .v.is-warn { color: var(--warn); text-shadow: none; }
+.gonio-read .v.is-bad  { color: var(--bad);  text-shadow: none; }
+
+.gonio-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #8b8d83;
+  max-width: 46ch;
+}
+
+/* ============================================================================
+   Dynamics history
+   ========================================================================= */
+
+.dyn-reads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dyn-read {
+  background: #121311;
+  padding: 8px 11px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dyn-read .k {
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #74766d;
+}
+
+.dyn-read .v {
+  font-family: var(--face-data);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lamp);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================================
+   Knobs — a milled cap on a faceplate. The cap itself is canvas; this is the
+   well it sits in and the engraved label and readout under it.
+   ========================================================================= */
+
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.knob-cap {
+  line-height: 0;
+  border-radius: 50%;
+  /* the shadow the cap casts on the panel below it */
+  box-shadow: 0 3px 7px -3px #000;
+}
+
+.knob-face {
+  display: block;
+  cursor: ns-resize;
+  touch-action: none;       /* so a drag on a touch screen turns the knob */
+  border-radius: 50%;
+}
+
+.knob-face:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+}
+
+.knob-face.is-turning { cursor: ns-resize; }
+
+.knob-label {
+  font-family: var(--face-engrave);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #86887e;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+}
+
+/* the typed readout: a small lit window, the way a digital read sits in a
+   metal panel */
+.knob-field {
+  width: 100%;
+  /* 68 px rather than 62: the EQ's gain range is ±18 dB, so the widest
+     reading is "−10.9 dB" and at 62 the unit was clipped off. */
+  max-width: 68px;
+  background: var(--panel-deep);
+  border: 1px solid #101109;
+  border-radius: 2px;
+  padding: 3px 4px;
+  font-family: var(--face-data);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--lamp);
+  box-shadow: inset 0 1px 3px #000;
+}
+
+.knob-field:focus-visible {
+  outline: 1px solid var(--gold-lit);
+  outline-offset: 0;
+  color: #f0dcae;
+}
+
+/* ============================================================================
+   Equalizer
+   ========================================================================= */
+
+.eq-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.eq-preset {
+  font-family: var(--face-engrave);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b9bbb0;
+  background: linear-gradient(180deg, #3a3c36 0%, #262823 52%, #1c1e1a 100%);
+  border: 1px solid #101109;
+  border-radius: 3px;
+  padding: 8px 15px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 #55574f,
+    inset 0 -2px 3px #0c0d0b,
+    0 2px 4px -1px #000;
+  transition: color 120ms linear, box-shadow 60ms linear;
+}
+
+.eq-preset:hover { color: var(--gold-lit); }
+
+/* the selected preset is a latched button: pressed in, and lit */
+.eq-preset.is-on {
+  color: var(--lamp);
+  border-color: #2e2a1c;
+  box-shadow:
+    inset 0 2px 5px #000,
+    inset 0 -1px 0 #45473f,
+    0 0 10px -4px rgba(255, 180, 84, 0.7);
+}
+
+.eq-preset:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.eq-why {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #8b8d83;
+  max-width: 68ch;
+}
+
+.eq-preset-chain {
+  margin: 0;
+  background: var(--panel-deep);
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 9px 11px;
+  overflow-x: auto;
+}
+
+.eq-preset-chain code {
+  font-family: var(--face-data);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--lamp);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  display: block;
+}
+
+/* ---- the fold-away band bank ------------------------------------------- */
+
+.eq-toggle {
+  align-self: flex-start;
+  font-family: var(--face-engrave);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9a9c92;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.eq-toggle:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+.eq-toggle:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* A strip is a strip: it stays the width of its controls rather than growing
+   to fill whatever cell the grid hands it, and the leftover on a wide card is
+   margin between strips instead of a gulf inside each one. The body sizes
+   itself from its three columns; the head is held to the same width so the
+   type selector does not run past the controls beneath it. */
+.eq-band-body { width: max-content; max-width: 100%; }
+.eq-band-head { width: 100%; max-width: 186px; }
+
+.eq-bank {
+  display: grid;
+  /* 196 px is a strip plus its padding: the fader's track, the knob gutter,
+     seven characters of readout, and room for the type selector across the
+     head. Sizing every column to its content made the strip much narrower
+     than the old side-by-side bank, so more of them fit across a wide card —
+     which is what a bank of channel strips should look like.
+     `auto-fill` rather than `auto-fit`: with auto-fit a five-band bank on a
+     wide card stretched four strips across the full width and left the fifth
+     alone beside an empty half-row. auto-fill keeps the column width honest,
+     so the strips stay the size they need and the leftover is margin rather
+     than four inflated cards. */
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  align-items: stretch;
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.eq-band {
+  background: linear-gradient(180deg, #1a1b18, #121311);
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The fader is the tall element; its legend belongs beside the cap rather than
+   under a column of empty slot, so the strip stops being twice the height of
+   the controls it holds. */
+.eq-fader { align-self: flex-start; }
+
+.eq-band-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eq-band-name {
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #9a9c92;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+}
+
+.eq-band-kind {
+  font-family: var(--face-data);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: #5f6159;
+}
+
+.eq-knobs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: center;
+  gap: 8px 4px;
+}
+
+/* ---- the output field -------------------------------------------------- */
+
+.eq-out {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.eq-out-label {
+  font-family: var(--face-data);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #6e7067;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eq-out-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.eq-chain {
+  flex: 1 1 260px;
+  min-width: 0;
+  background: var(--panel-deep);
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 9px 11px;
+  font-family: var(--face-data);
+  font-size: 12px;
+  color: var(--lamp);
+  box-shadow: inset 0 1px 3px #000;
+}
+
+.eq-chain::placeholder { color: #5a5c54; }
+
+.eq-chain:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+}
+
+.eq-copy {
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  color: var(--gold-lit);
+  font-family: var(--face-engrave);
+  font-size: 14px;
+  letter-spacing: 0.10em;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.eq-copy:hover { border-color: var(--gold); color: #f0dcae; }
+
+.eq-copy:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.eq-copy--ghost { color: #9a9c92; }
+.eq-copy--ghost:hover { color: var(--gold-lit); }
+
+.eq-copy:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- the gain fader ----------------------------------------------------
+   A slot milled into the faceplate with a knurled cap in it. The cap and the
+   slot are canvas — a recess with light falling into it is not a border — and
+   this is the well around them, the engraved legend and the lit readout.
+   ---------------------------------------------------------------------- */
+
+.eq-fader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.eq-fader-face {
+  display: block;
+  cursor: ns-resize;
+  touch-action: none;       /* so a drag on a touch screen moves the cap */
+  border-radius: 3px;
+}
+
+.eq-fader-face:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.eq-fader-face.is-sliding { cursor: grabbing; }
+
+/* the readout under the cap: the same lit window the knob field is, but read
+   only — the number is typed into the knob beside it, not here */
+.eq-fader-read {
+  font-family: var(--face-data);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--lamp);
+  background: var(--panel-deep);
+  border: 1px solid #101109;
+  border-radius: 2px;
+  padding: 2px 5px;
+  min-width: 42px;
+  text-align: center;
+  box-shadow: inset 0 1px 3px #000;
+}
+
+/* at rest the readout is unlit: an amber number should mean somebody moved
+   something */
+.eq-fader-read.is-zero { color: #6e7067; }
+
+/* a band with no gain keeps the slot's width so the bank's columns stay in
+   line, and says why the slot is empty rather than leaving a hole */
+.eq-fader--none {
+  width: 38px;
+  min-height: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #2a2c27;
+  border-radius: 3px;
+}
+
+.eq-fader-none-note {
+  font-family: var(--face-engrave);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4e5049;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* ---- the band strip: three columns, the way a channel strip is ----------
+   The gain fader runs the full height on the left, the three knobs stack in
+   the middle, and each knob's engraved legend and typed readout sits on its
+   right. Every column is sized to its content — a fixed narrow track, a
+   knob's width, and about seven characters of mono for the longest reading
+   ("110 Hz", "-10.9 dB", "0.70") — so the strip ends where the numbers end
+   rather than stretching into empty faceplate.
+   ---------------------------------------------------------------------- */
+
+.eq-band-body {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* the fader's column: one tall track, hugging its own width */
+.eq-band-fader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.eq-band-fader .eq-fader { gap: 0; justify-content: flex-start; }
+
+/* the knobs, stacked */
+.eq-band-knobs {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* one knob and its numbers */
+.eq-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* the knob sits in a gutter its own width, so all three legends and readouts
+   start at the same x — the alignment down the column is the point */
+.eq-row-ctl {
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+/* the factories build a centred column; in a row that column is just the
+   control, its label and field having been moved into the value column */
+.eq-row .knob { gap: 0; }
+
+.eq-row-side {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* the engraved legend, beside the knob rather than under it */
+.eq-row-name {
+  font-family: var(--face-engrave);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #86887e;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+  line-height: 1;
+}
+
+/* the readouts: one width for all three, so they stack into a column of
+   numbers that can be read straight down. 8.5ch of mono plus the padding is
+   what the longest reading actually needs — "-10.9 dB" and "10.0k Hz" both
+   carry a unit, and at 7ch the unit was being clipped to "110 H" and
+   "0.0 d", which is a readout that lies about what it is showing. */
+.eq-row-side .knob-field {
+  width: 8.6ch;
+  max-width: none;
+  text-align: left;
+  padding: 2px 4px;
+  font-size: 10.5px;
+}
+
+/* a band with no gain keeps the row's height so every strip in the bank lines
+   up, and prints a dash rather than a number that would be a lie */
+.eq-row-dead-note {
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  color: #4e5049;
+  padding: 2px 4px;
+  width: 8.6ch;
+}
+
+/* The empty fader column on a gain-less band. A pass or notch filter has no
+   gain to move, so there is no slot milled here — just the blank faceplate a
+   real desk leaves where a control was never fitted, with the legend engraved
+   down it. A dashed box drew more attention to the absence than the controls
+   beside it got, which is backwards. */
+.eq-band-fader .eq-fader--none {
+  width: 32px;
+  min-height: 146px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.012) 0 3px,
+      transparent 3px 6px);
+  border-radius: 2px;
+}
+
+.eq-fader-none-note {
+  font-family: var(--face-engrave);
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #3e403a;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* the knob column keeps its rows evenly spread whatever the band's type, so
+   FREQ, GAIN and Q sit at the same three heights on every strip in the bank */
+.eq-row { min-height: 44px; }
+
+/* the per-band type selector: a small recessed window, the OS paints the
+   popup and only these colours are ours */
+.eq-band-type {
+  font-family: var(--face-data);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: #9a9c92;
+  background: var(--panel-deep);
+  border: 1px solid #101109;
+  border-radius: 2px;
+  padding: 2px 3px;
+  max-width: 88px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 2px #000;
+}
+
+.eq-band-type:focus-visible {
+  outline: 1px solid var(--gold-lit);
+  color: var(--gold-lit);
+}
+
+/* remove: a small recessed button, red only once the pointer is on it, so a
+   destructive control is not the loudest thing on the strip */
+.eq-band-kill {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 13px;
+  color: #6e7067;
+  background: linear-gradient(180deg, #2a2c27, #171815);
+  border: 1px solid #101109;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.eq-band-kill:hover:not(:disabled) { color: #ffc4ad; border-color: var(--bad); }
+
+.eq-band-kill:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+}
+
+.eq-band-kill:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* The head carries four things now — the ON switch, the band's name, its type
+   and its remove button — which is one more than a 210 px strip fits on a
+   line. So it reads as two tiers: the switch and the name, which is what the
+   strip is called and whether it is in the path, then the type selector with
+   the remove button welded to its right. Wrapping was doing this by accident
+   and doing it differently per strip, which is what put a stray × on a line of
+   its own and made two strips taller than the rest. */
+.eq-band-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "power name name"
+    "type  type kill";
+  align-items: center;
+  gap: 5px 6px;
+}
+
+.eq-band-power { grid-area: power; }
+.eq-band-name {
+  grid-area: name;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eq-band-type { grid-area: type; width: 100%; max-width: none; }
+.eq-band-kill { grid-area: kill; justify-self: end; }
+
+/* ---- saved presets ------------------------------------------------------
+   A saved preset is the user's, not master.py's, so it wears a different
+   face: the gold pinstripe down its leading edge, and a delete button welded
+   to its trailing edge rather than floating beside it.
+   ---------------------------------------------------------------------- */
+
+.eq-preset-saved {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.eq-preset--user {
+  border-left: 2px solid var(--gold);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-family: var(--face-text);
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.eq-preset-del {
+  font-size: 13px;
+  line-height: 1;
+  color: #6e7067;
+  background: linear-gradient(180deg, #2a2c27, #171815);
+  border: 1px solid #101109;
+  border-left: none;
+  border-radius: 0 3px 3px 0;
+  padding: 0 7px;
+  cursor: pointer;
+}
+
+.eq-preset-del:hover { color: #ffc4ad; border-color: var(--bad); }
+
+.eq-preset-del:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+}
+
+/* save: an outline button, because it does not select a preset the way every
+   other button in the row does */
+.eq-preset--save {
+  background: none;
+  box-shadow: none;
+  border: 1px dashed var(--hairline);
+  color: #86887e;
+  padding: 8px 12px;
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-family: var(--face-text);
+  font-size: 12px;
+}
+
+.eq-preset--save:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+/* ---- the curve, now that it is a control ------------------------------- */
+
+.eq-curve { position: relative; }
+
+.eq-curve canvas {
+  touch-action: none;       /* a handle drag on a touch screen must not scroll */
+  display: block;
+}
+
+.eq-curve canvas.is-over { cursor: grab; }
+.eq-curve canvas.is-dragging { cursor: grabbing; }
+
+/* the readout that follows the cursor while a handle is dragged */
+.eq-tip {
+  position: absolute;
+  pointer-events: none;
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--lamp);
+  background: rgba(10, 11, 9, 0.94);
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  padding: 3px 7px;
+  box-shadow: 0 3px 10px -3px #000;
+  z-index: 2;
+}
+
+.eq-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #6e7067;
+  max-width: 68ch;
+}
+
+.eq-add { margin-left: 0; }
+
+/* ============================================================================
+   The tray
+   ========================================================================= */
+
+.tray { position: relative; display: inline-block; }
+
+.tray-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: calc(var(--gap) * -0.4);
+}
+
+.tray-btn { white-space: nowrap; }
+
+.tray-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(340px, calc(100vw - 32px));
+  border-radius: var(--rack-radius);
+  background:
+    linear-gradient(180deg, var(--panel-hi) 0%, var(--panel) 7%,
+                            var(--panel) 93%, var(--panel-lo) 100%);
+  border: 1px solid #101109;
+  box-shadow:
+    inset 0 1px 0 #43453e,
+    0 18px 40px -14px #000,
+    0 2px 0 #000;
+  padding: 12px;
+}
+
+.tray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tray-title {
+  font-family: var(--face-engrave);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #a5a79c;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+}
+
+.tray-hint {
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  color: #6e7067;
+  letter-spacing: 0.05em;
+}
+
+.tray-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+  touch-action: none;       /* the reorder drag owns vertical movement */
+}
+
+.tray-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #121311;
+  padding: 7px 8px;
+  position: relative;
+  z-index: 0;
+}
+
+.tray-row.is-dragging {
+  z-index: 2;
+  background: #1c1e1a;
+  box-shadow: 0 8px 18px -8px #000;
+}
+
+/* the grip: three milled ridges, the handle a real rack panel would have */
+.tray-grip {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 18px;
+  cursor: grab;
+  border-radius: 2px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    #6b6d64 0px, #6b6d64 1px,
+    transparent 1px, transparent 4px
+  );
+  background-size: 12px 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.55;
+}
+
+.tray-row:hover .tray-grip { opacity: 0.9; }
+.is-reordering .tray-grip { cursor: grabbing; }
+
+.tray-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.tray-label input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.tray-text { min-width: 0; display: block; }
+
+.tray-text b {
+  display: block;
+  font-family: var(--face-text);
+  font-size: 13px;
+  font-weight: 500;
+  color: #c3c5ba;
+  line-height: 1.3;
+}
+
+.tray-text i {
+  display: block;
+  font-style: normal;
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  color: #6e7067;
+  line-height: 1.4;
+}
+
+.tray-moves { display: flex; flex-direction: column; gap: 2px; }
+
+.tray-move {
+  width: 20px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  line-height: 1;
+  color: #8b8d83;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tray-move:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+.tray-move:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+}
+
+.tray-foot { margin-top: 10px; display: flex; justify-content: flex-end; }
+
+.tray-reset {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-family: var(--face-data);
+  font-size: 11px;
+  color: #7e8077;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #3d3f39;
+}
+
+.tray-reset:hover { color: var(--gold-lit); }
+
+.tray-reset:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Responsive — down to 400 px the knobs still turn and nothing scrolls sideways
+   ========================================================================= */
+
+@media (max-width: 720px) {
+  .gonio { flex-direction: column; }
+  .scope--square { align-self: stretch; max-width: 100%; }
+  .scope--square canvas { margin: 0 auto; }
+}
+
+@media (max-width: 520px) {
+  .eq-bank { grid-template-columns: 1fr; }
+  /* At 400 px a strip is the full card width, and the three columns still
+     fit: fader, knobs and a seven-character readout come to about 180 px, so
+     nothing needs to stack or reflow. The strip simply sits at the left of
+     its row rather than being centred in it. */
+  .eq-band-body { width: max-content; }
+  /* The head keeps the controls' width rather than running the full card: a
+     type selector stretched across 380 px above a 130 px stack of knobs is a
+     strip that stops looking like a strip. */
+  .eq-band-head { max-width: 210px; }
+  .eq-band-type { max-width: none; }
+  .meter-status { margin-left: 0; text-align: left; width: 100%; }
+  .tray-panel {
+    /* a 340 px panel hanging off the right of a 400 px screen would run off
+       it; pinned to the viewport instead */
+    position: fixed;
+    right: 12px;
+    left: 12px;
+    top: auto;
+    width: auto;
+  }
+  .knob-field { max-width: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-preset, .tray-row { transition: none; }
+}
+
+/* Bypass — the A/B switch. Lit when the EQ is OUT of circuit, because that is
+   the state worth noticing: it means what you hear is not what the curve says.
+   It sits on the same row as the band toggle and wears the same pushbutton as
+   the rest of the faceplate; without the base rule it rendered as a full-width
+   browser default button, which is how it first arrived. */
+.eq-bypass {
+  align-self: flex-start;
+  font-family: var(--face-engrave);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9a9c92;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.eq-bypass:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+.eq-bypass:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* The toggle and the bypass share one row rather than stacking. */
+.eq-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.eq-bypass.is-on {
+  background: linear-gradient(180deg, #4a2b20, #2a1712);
+  border-color: var(--bad);
+  color: #ffc4ad;
+}
+
+/* ============================================================================
+   The per-band ON switch — a lit pip beside an engraved legend.
+
+   Not a checkbox. The question it answers is the one you ask about a channel
+   strip from across the room: is this band in the path? So it is a lamp, dark
+   when the band is out and burning tungsten when it is in, with the bleed a
+   real backlit indicator throws onto the metal around it. The band's settings
+   are untouched either way — switching out is a bypass, not a reset.
+   ========================================================================= */
+
+.eq-band-power {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px 3px 5px;
+  background: linear-gradient(180deg, #24261f, #131410);
+  border: 1px solid #101109;
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(120, 122, 113, 0.14), 0 1px 2px #000;
+}
+
+/* the pip itself: dark glass over a dead filament */
+.eq-band-lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #14150f;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.9),
+    inset 0 1px 1px rgba(0, 0, 0, 0.8);
+  transition: background 90ms linear, box-shadow 90ms linear;
+}
+
+.eq-band-power-text {
+  font-family: var(--face-engrave);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #5f6159;
+  line-height: 1;
+  transition: color 90ms linear;
+}
+
+/* lit: the filament, the halo it throws on the glass, and the warm bleed onto
+   the faceplate around the button */
+.eq-band-power.is-on {
+  border-color: #4a3a1e;
+  background: linear-gradient(180deg, #2e2719, #16130d);
+}
+
+.eq-band-power.is-on .eq-band-lamp {
+  background: radial-gradient(circle at 38% 34%, #ffe0ab 0%, var(--lamp) 48%, #b46a16 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 224, 171, 0.5),
+    0 0 4px 1px rgba(255, 180, 84, 0.75),
+    0 0 9px 2px rgba(255, 180, 84, 0.3);
+}
+
+.eq-band-power.is-on .eq-band-power-text { color: var(--lamp); }
+
+.eq-band-power:hover { border-color: var(--gold); }
+.eq-band-power:hover .eq-band-power-text { color: var(--gold-lit); }
+
+.eq-band-power:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+}
+
+/* A switched-out strip reads as inactive metal — the controls stay legible and
+   usable (you can set a band up before putting it in circuit) but the strip
+   stops competing with the ones that are actually in the path. */
+.eq-band.is-off {
+  background: linear-gradient(180deg, #151613, #0f100e);
+}
+
+.eq-band.is-off .eq-band-name,
+.eq-band.is-off .eq-row-name { color: #5b5d55; }
+
+.eq-band.is-off .eq-row-ctl,
+.eq-band.is-off .eq-row-side .knob-field,
+.eq-band.is-off .eq-row-side .eq-fader-read {
+  opacity: 0.45;
+  filter: saturate(0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-band-lamp, .eq-band-power-text { transition: none; }
+}
+
+/* ============================================================================
+   Auto gain compensation — the defeat switch, the trim readout, the clip lamp
+
+   The monitor path has no limiter after the EQ, so a boost clips the browser's
+   output and the user hears distortion the panel invented. Compensation is on
+   by default and these three controls are how it reports itself: a lamp that
+   says it is working, a number that says how much it is taking away, and a
+   clip indicator that only means anything once the compensation is defeated.
+
+   The switch wears the same lit-pip pushbutton as the per-band ON lamps, since
+   it is the same kind of statement: something is in the path or it is not.
+   ========================================================================= */
+
+.eq-comp {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.eq-comp-lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1a1b18;
+  border: 1px solid #0b0c0a;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.8);
+  flex: 0 0 auto;
+}
+
+.eq-comp-text {
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6e7067;
+  text-shadow: 0 -1px 0 #0c0d0b;
+}
+
+/* Lit: the compensation is in. This is the default state, so it is quiet —
+   a steady green pip rather than an alarm. The loud state is the other one. */
+.eq-comp.is-on .eq-comp-lamp {
+  background: #8fd49b;
+  border-color: #3c5f42;
+  box-shadow: 0 0 5px rgba(143, 212, 155, 0.55), inset 0 0 2px #e6fbea;
+}
+
+.eq-comp.is-on .eq-comp-text { color: #a9c9b0; }
+
+.eq-comp:hover { border-color: var(--gold); }
+.eq-comp:hover .eq-comp-text { color: var(--gold-lit); }
+
+.eq-comp:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* The applied trim. A lit readout when it is doing something, unlit when it
+   is not — the same rule the fader readouts follow, so an amber number on
+   this panel always means somebody's setting moved something. */
+.eq-trim {
+  flex: 0 0 auto;
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--lamp);
+  background: var(--panel-deep);
+  border: 1px solid #101109;
+  border-radius: 2px;
+  padding: 4px 7px;
+  box-shadow: inset 0 1px 3px #000;
+  white-space: nowrap;
+}
+
+.eq-trim.is-idle { color: #6e7067; }
+
+/* The clip lamp. Hidden until the monitor path has measurably gone over full
+   scale with compensation defeated — read from the ScriptProcessor's own
+   sample peaks, never predicted. Loud on purpose: it is the one condition on
+   this panel where what you are hearing is not what the curve says. */
+.eq-clip {
+  flex: 0 0 auto;
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ffc4ad;
+  background: linear-gradient(180deg, #5a2a1c, #331610);
+  border: 1px solid var(--bad);
+  border-radius: 2px;
+  padding: 4px 8px;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(224, 96, 62, 0.45);
+}
+
+.eq-clip:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   The fader's own legend and typed field
+
+   The GAIN knob is gone: it and the fader were two controls for one number,
+   and the fader is the half worth keeping — taller, more precise, and a row of
+   fader caps shows the shape of the whole bank the way a row of knob pointers
+   cannot. So the number moves onto the fader, where it stays typable.
+   ========================================================================= */
+
+.eq-fader-name {
+  font-family: var(--face-engrave);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #86887e;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+  line-height: 1;
+  margin-top: 5px;
+  text-align: center;
+}
+
+/* Wide enough for the longest reading this field can hold — "-18.0 dB" is
+   eight characters plus the padding. At 7.4ch it clipped to "-3.0 d", which
+   is a readout that lies about its own units. */
+.eq-fader-field {
+  width: 8.8ch;
+  max-width: none;
+  margin-top: 3px;
+  padding: 2px 3px;
+  font-size: 10px;
+  text-align: center;
+}
+
+/* at rest the readout is unlit: an amber number should mean somebody moved
+   something */
+.eq-fader-field.is-zero { color: #6e7067; }
+
+/* The fader column holds the slot, its legend and its field as one stack, so
+   the three read as a single control rather than a canvas with loose parts.
+
+   The stack must not be stretched by the column: `.eq-fader` inherits
+   `align-self: flex-start` from the base rule, and the column around it is
+   `align-items: stretch`, which left the legend and field stranded at the
+   bottom of the strip with a gulf of empty faceplate between them and the
+   slot they belong to. Hugging the content puts them back under the cap. */
+.eq-band-fader { align-items: flex-start; }
+
+.eq-band-fader .eq-fader {
+  gap: 0;
+  justify-content: flex-start;
+  align-items: center;
+  align-self: flex-start;
+}
+
+/* ============================================================================
+   Re-tightening the strip after losing the GAIN row
+
+   The knob column is two rows now, not three, so the fixed 146 px fader and
+   the 44 px row floor were sized for a strip that no longer exists. The rows
+   keep a comfortable touch target, the fader shortens to match the two rows
+   plus its own legend and field, and the strip ends up materially shorter —
+   which is what keeps five bands in one row of the bank.
+   ========================================================================= */
+
+.eq-band-knobs { justify-content: flex-start; gap: 6px; }
+
+/* Two rows, so each can afford to be its natural height rather than padded
+   out to hold a third in line. */
+.eq-row { min-height: 40px; }
+
+/* The blank column on a gain-less band matches the new fader height. */
+.eq-band-fader .eq-fader--none { min-height: 104px; }
+
+.eq-band { padding: 9px 10px 10px; gap: 7px; }
+
+/* ============================================================================
+   Waveform — the track in time
+
+   The lane stack is a scope well like every other instrument here, with two
+   additions the others do not need: an overview strip under it that behaves
+   as the scrollbar of the timeline, and a tooltip that has to stay legible
+   over a lit waveform at any width.
+   ========================================================================= */
+
+/* The main lane. A grab cursor, because the first thing anyone does to a
+   waveform is push it around. */
+.wave-scope {
+  cursor: crosshair;
+  touch-action: none;          /* the wheel is zoom and the drag is a scrub */
+}
+
+.wave-scope canvas:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: -2px;
+}
+
+.wave-scope.is-panning,
+.wave-scope canvas.is-panning { cursor: grabbing; }
+
+/* The overview: a shallower well, a hair of gold at its top edge so it reads
+   as a fitting under the lane rather than a second instrument. */
+.wave-strip {
+  cursor: ew-resize;
+  touch-action: none;
+  box-shadow: inset 0 2px 5px #000, 0 1px 0 #40423b;
+  border-top: 1px solid rgba(168, 137, 78, 0.16);
+}
+
+/* The transport buttons on the meter bar sit tighter than a page button: four
+   of them plus a readout have to fit a 400 px card. */
+.wave-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.wave-btn--icon {
+  padding: 6px 0;
+  width: 30px;
+  font-family: var(--face-data);
+  font-size: 14px;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+/* Lit when the grid is in circuit, the same way the EQ bypass lamp works. */
+.wave-btn[aria-pressed="true"] { color: var(--lamp); }
+
+/* The finding tooltip. Positioned from script inside the scope well, so it is
+   absolute against that well and never escapes the card. */
+.wave-tip {
+  position: absolute;
+  z-index: 3;
+  max-width: min(280px, calc(100% - 8px));
+  padding: 5px 8px;
+  pointer-events: none;
+  font-family: var(--face-text);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--dial);
+  background: rgba(16, 17, 14, 0.94);
+  border: 1px solid rgba(168, 137, 78, 0.45);
+  border-radius: 3px;
+  box-shadow: 0 4px 10px -2px #000;
+}
+
+/* Legend keys for the two tones of the wave and for the grid, so the colours
+   in the drawing are named in the same row as everyone else's. */
+.meter-legend .key--wave-peak { background: #e7c176; }
+.meter-legend .key--wave-rms  { background: #ba562a; }
+.meter-legend .key--wave-bar  { background: var(--gold); }
+
+@media (max-width: 520px) {
+  /* At 400 px the four controls and the readout stop sharing a line; the bar
+     already wraps, and the readout takes its own row under them. */
+  .wave-btn { padding: 6px 10px; }
+}
+
+/* ============================================================================
+   The mastering suite — compressor, stereo imager, maximizer, soft clip
+
+   Four devices in one card, so the sections have to read as separate units of
+   metal without each one becoming a card of its own. Same grid trick the band
+   bank uses: a 1 px gap over a near-black ground, which is a seam rather than
+   a border and costs nothing in width.
+   ========================================================================= */
+
+/* ---- the wiring row --------------------------------------------------- */
+
+/* The patch switch is deliberately not an .eq-bypass. Bypass is a device
+   control; this is the cable, and on the back panel this panel anticipates it
+   is a different object entirely. It gets the jack, the green lamp of a live
+   connection, and it sits first. */
+.rack-patch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--face-engrave);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9a9c92;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 7px 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+.rack-patch:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+.rack-patch:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* The jack: a socket ring with a dark bore, lit when a cable is in it. */
+.rack-patch-jack {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: radial-gradient(circle at 50% 50%, #07080a 0 34%, #3a3c36 36% 100%);
+  box-shadow: inset 0 0 0 1px #0b0c0a, 0 1px 0 rgba(120, 122, 113, 0.18);
+}
+.rack-patch.is-on {
+  border-color: #3c5f42;
+  background: linear-gradient(180deg, #24382a, #131c16);
+  color: #bcdcc2;
+}
+.rack-patch.is-on .rack-patch-jack {
+  background: radial-gradient(circle at 50% 50%, #e6fbea 0 34%, #6f9f72 36% 100%);
+  box-shadow: 0 0 6px rgba(143, 212, 155, 0.6), inset 0 0 0 1px #2a412f;
+}
+
+/* Bypass with nothing patched is a switch that cannot do anything, so it is
+   disabled rather than left to be pressed and have no effect. */
+.rack-wiring .eq-bypass:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.rack-wiring .eq-bypass:disabled:hover {
+  border-color: var(--hairline);
+  color: #9a9c92;
+}
+
+/* ---- the gain reduction meters ---------------------------------------- */
+
+/* Side by side, because the question is always how much each device is doing
+   relative to the other — a limiter working while the compressor sleeps is a
+   different setting from both working, and stacking them hides that. */
+.rack-grs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rack-gr {
+  background: #121311;
+  padding: 8px 11px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.rack-gr-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rack-gr-name {
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #74766d;
+}
+.rack-gr-read {
+  font-family: var(--face-data);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lamp);
+  white-space: nowrap;
+}
+.rack-gr-read.is-idle { color: #4e5049; }
+
+.rack-gr-bar {
+  display: block;
+  width: 100%;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 3px #000;
+}
+
+/* ---- the device sections ---------------------------------------------- */
+
+.rack-sections {
+  display: grid;
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rack-dev {
+  background: linear-gradient(180deg, #1a1b18, #121311);
+  padding: 11px 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+.rack-dev-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rack-dev-names {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rack-dev-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* A device switched out keeps its numbers and reaches none of the audio. Same
+   statement the EQ's dead strips make, so it gets the same treatment. */
+.rack-dev.is-off { background: linear-gradient(180deg, #151613, #0f100e); }
+.rack-dev.is-off .eq-band-name,
+.rack-dev.is-off .eq-row-name,
+.rack-dev.is-off .eq-band-kind { color: #5b5d55; }
+
+.rack-dev.is-off .rack-knobs,
+.rack-dev.is-off .rack-switches,
+.rack-dev.is-off .eq-hint {
+  opacity: 0.45;
+  filter: saturate(0.3);
+}
+
+/* The knob rows wrap into as many columns as the card is wide. 168 px is a
+   38 px cap, the gutter, and eight characters of readout — the widest of
+   these is "180 ms" with room to grow to "9000 ms". */
+/* The knob cell is sized to the knob, not to the panel.
+   Measured before this was fixed: a 200 px cell held a 38 px knob and a 60 px
+   field — 98 px of control and 102 px of air, so half of every row was the
+   gap between a knob and the label naming it. The equaliser fits the same
+   knob and field in 99 px, and the two panels should read as one instrument.
+   `auto-fill` then packs as many as the panel allows and the leftover width
+   goes to the right margin, where nobody sees it. */
+.rack-knobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 116px));
+  justify-content: start;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+/* Switches and named choices share a row and wrap together: they are the same
+   kind of control — a setting with a handful of values — however they are
+   drawn. */
+.rack-switches {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rack-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* A device power switch is taller than a band's: it governs a section rather
+   than a strip, and on the head row it has to hold its own against the title. */
+.rack-power { padding: 5px 10px 5px 8px; }
+
+/* ---- the approximation notice -----------------------------------------
+   Amber, not red. The preview being inexact is not a fault and not a warning;
+   it is a fact about what a browser can build, and the panel's whole reason
+   for saying it is that silence here would be the actual failure. */
+.rack-approx {
+  margin: 0;
+  font-family: var(--face-data);
+  font-size: 11px;
+  line-height: 1.6;
+  color: #c9ae7c;
+  background: rgba(168, 137, 78, 0.10);
+  border: 1px solid rgba(168, 137, 78, 0.35);
+  border-left: 3px solid var(--gold);
+  border-radius: 3px;
+  padding: 8px 11px;
+  max-width: 86ch;
+}
+
+/* The mark on the affected control. Sits in the label, so the eye finds it
+   while reading what the knob is rather than having to look elsewhere.
+
+   Hidden by default and shown with .is-on, rather than by the `hidden`
+   attribute: `display: inline-block` here would beat the UA's
+   `[hidden] { display: none }` and leave every chip on screen, which is the
+   one failure this mark must not have. */
+.rack-approx-mark {
+  display: none;
+  margin-left: 5px;
+  font-family: var(--face-data);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--gold-lit);
+  cursor: help;
+}
+.rack-approx-mark.is-on { display: inline-block; }
+
+/* The readouts here run one character longer than the EQ's, which sized its
+   field at 8.6ch for "10.0k Hz". "−18.0 dB" is nine, and a threshold that
+   silently drops its unit is a number you cannot act on. */
+.rack-knobs .eq-row-side .knob-field { width: 9.6ch; }
+
+/* The summary's two parts. A single run-on sentence held up to one
+   divergence and fell apart at three: the numbers that matter ("asked 2.4 s,
+   previewing 1.0 s") ended up buried mid-paragraph. The headline says how
+   many and who wins; the list gives one line per control, named as the
+   faceplate names it. */
+.rack-approx-head { display: block; }
+
+.rack-approx-list {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+
+.rack-approx-list li { margin: 2px 0; }
+
+.rack-approx-knob {
+  color: var(--gold-lit);
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Two layout corrections, both found by looking at the panel rather than by
+   any assertion — lit-pixel counts cannot tell "laid out well" from "drawn".
+   -------------------------------------------------------------------------- */
+
+/* The gain-reduction meters belong WITH the wiring controls, not on a row of
+   their own above the whole panel. They are the readout that says whether the
+   patch is doing anything, so they read as part of that decision — and on a
+   wide bench they now sit beside the buttons instead of stranded over them. */
+.rack-wiring {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.rack-grs {
+  flex: 1 1 320px;
+  min-width: 260px;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  /* Narrow, the meters take their own line under the buttons rather than
+     squeezing both onto one. */
+  .rack-grs { flex-basis: 100%; }
+}
+
+/* ==========================================================================
+   The second equaliser — a rack-mounted five-band parametric
+   --------------------------------------------------------------------------
+   equalizer2.js builds a unit bolted into a server rack: a faceplate with a
+   cage-nut rail down each side, four screws holding it on, and the unit's name
+   engraved up the left ear the way a name plate on a real one reads. It sits
+   after the first equaliser in the signal path, so it is drawn as a second
+   box rather than as a second view of the first panel's controls.
+
+   The layout is two columns inside the faceplate. On the left the head — title,
+   the On and Bypass keys, the patch jack — over a tall response scope. On the
+   right a row of five band columns, each a vertical name, a lamp, its knobs
+   and an engraved glyph of the filter shape it makes.
+
+   Everything here is structure and metal. The knob, the scope well, the band
+   lamp and the patch jack are the studio's existing controls and are NOT
+   redefined: `.knob`, `.scope`, `.eq-band-power`, `.eq-band-lamp`,
+   `.eq-band-power-text`, `.rack-patch`, `.rack-patch-jack` and `.unit-note` all
+   come from the blocks above, and this section only places them.
+   ========================================================================= */
+
+/* --- the rack unit -------------------------------------------------------
+   Two columns: the ear that bolts to the rail, and everything else. */
+.ru {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 0 16px;
+  padding: 12px 16px 14px 12px;
+  align-items: center;
+}
+
+.ru-ear {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+  border-right: 1px solid var(--hairline);
+  padding-right: 10px;
+}
+
+.ru-ear .eq-band-power { padding: 4px 5px; }
+
+/* The name plate, reading up the rack. */
+.ru-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #a5a79c;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+  flex: 1;
+  text-align: center;
+}
+
+.ru-body {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+
+.seg-keys { display: flex; gap: 4px; }
+.ru .eq-band-power-text { font-size: 9px; white-space: nowrap; }
+
+/* --- the screwed faceplate -----------------------------------------------
+   A vertical strip of rail either side, the unit's ears bolted onto them. The
+   rails are the faceplate's own ::before and ::after, so they cannot be
+   knocked out of alignment by anything inside the unit. */
+.ru--screwed {
+  position: relative;
+  padding-left: 46px;
+  padding-right: 46px;
+  gap: 0 6px;
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(0, 0, 0, 0.7);
+}
+
+.ru--screwed::before,
+.ru--screwed::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 40px;
+}
+
+/* The two rails are mirrored, so each gets its gradient run the other way:
+   the light falls from the upper left across the whole bench, and a rail lit
+   from the same side as its opposite number reads as a printing error. */
+.ru--screwed::before {
+  left: 0;
+  background: linear-gradient(90deg, #2a2b26, #1e1f1b 55%, #171814);
+  border-right: 1px solid #0b0c0a;
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 1px 0 0 rgba(255, 255, 255, 0.04),
+    4px 0 6px -2px rgba(0, 0, 0, 0.45),
+    7px 0 0 -6px var(--hairline);
+}
+
+.ru--screwed::after {
+  right: 0;
+  background: linear-gradient(270deg, #2a2b26, #1e1f1b 55%, #171814);
+  border-right: 0;
+  border-left: 1px solid #0b0c0a;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset -1px 0 0 rgba(255, 255, 255, 0.04),
+    -4px 0 6px -2px rgba(0, 0, 0, 0.45),
+    -7px 0 0 -6px var(--hairline);
+}
+
+.ru--screwed .ru-ear {
+  border-right: 0;
+  padding-left: 0;
+  padding-right: 4px;
+}
+
+.ru--screwed .ru-ear,
+.ru--screwed .ru-body { position: relative; z-index: 1; }
+
+/* The groove where the rail meets the faceplate. */
+.rail-groove {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 5px;
+  z-index: 1;
+  background: linear-gradient(90deg, #0a0b09, #141512 45%, #0a0b09);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.rail-groove::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.rail-groove--l { left: 40px; }
+.rail-groove--l::after { right: -1px; }
+.rail-groove--r { right: 40px; }
+.rail-groove--r::after { left: -1px; }
+
+/* The screws. Each is turned to its own angle, because four screws driven to
+   exactly the same clock position is the one thing that never happens on a
+   real rack and is the first thing the eye notices when it does. */
+.screw {
+  position: absolute;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #6a6c62 0%, #3c3e37 45%, #1c1d19 100%);
+  box-shadow:
+    inset 0 0 0 1px #0b0c0a,
+    0 0 0 2px #0f100d,
+    0 0 0 3px rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.screw::before,
+.screw::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 13px;
+  height: 2.4px;
+  background: linear-gradient(90deg, #0a0b09, #141512, #0a0b09);
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.screw::after { --r: 90deg; }
+.screw--tl { left: 9px; top: 9px; }
+.screw--tr { right: 9px; top: 9px; --r: 22deg; }
+.screw--tr::after { --r: 112deg; }
+.screw--bl { left: 9px; bottom: 9px; --r: -15deg; }
+.screw--bl::after { --r: 75deg; }
+.screw--br { right: 9px; bottom: 9px; --r: 40deg; }
+.screw--br::after { --r: 130deg; }
+
+/* --- the equaliser's own layout ------------------------------------------ */
+.ru--eq { align-items: stretch; }
+.ru-body--eq { align-items: stretch; gap: 0; }
+
+/* The left half: head, patch row, scope. */
+.eqm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 16px 0 4px;
+}
+
+.ru--screwed .eqm { padding-right: 8px; }
+
+/* Title, note and keys on one row — but the note is the part that yields.
+   A third key (Patch) joined the row and squeezed "5-band parametric" down to
+   "5-b…", which is worse than not showing it: a truncated label reads as a
+   fault. The note now drops to its own line when the row cannot hold all
+   three, and the keys keep their width because they are controls. */
+.eqm-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "title note keys";
+  align-items: start;
+  gap: 0 14px;
+  min-width: 0;
+}
+
+/* The note gets its own line, at every width.
+   Measured: the note needs 123 px and had 35 on a 925 px card — because the
+   band bank is a fixed 424 px, so widening the CARD does not widen this
+   column. A container query on card width was therefore the wrong question
+   and fired backwards, leaving the note truncated when there was most room.
+   Title and keys hold the top line; the note sits under the title, where it
+   has the whole column. */
+.eqm-head {
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "title keys" "note note";
+  row-gap: 1px;
+}
+.eqm-head .unit-note {
+  align-self: start;
+  padding-top: 1px;
+  padding-bottom: 0;
+}
+.eqm-head .eqm-title { grid-area: title; }
+.eqm-head .unit-note {
+  grid-area: note;
+  align-self: end;
+  padding-bottom: 2px;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.eqm-head .seg-keys {
+  grid-area: keys;
+  align-self: start;
+  margin-top: -4px;
+  flex: 0 0 auto;
+}
+
+.eqm-title {
+  font-family: var(--face-engrave);
+  font-size: 22px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b8b3a4;
+  text-shadow: 0 -1px 0 #0a0b09, 0 1px 0 #494b43;
+  line-height: 1;
+}
+
+/* The patch key sits in the row with On and Bypass, drawn as the same kind of
+   switch, because it is one. It had its own line below the head and that cost
+   the scope a whole row of height for a control that belongs beside the two
+   it relates to.
+
+   Its lamp is green rather than amber: patched is a routing state, not a
+   setting, and the one question this key answers — is this unit in the path
+   at all — should not be answered in the same colour as "is this band on". */
+.eqm-key-patch { margin-right: 6px; }
+
+.eqm-key-patch.is-on .eq-band-lamp {
+  background: #7fd88a;
+  box-shadow: 0 0 7px -1px rgba(127, 216, 138, 0.85), inset 0 1px 1px #fff4;
+}
+
+/* Out of the path, the whole faceplate reads as inactive — the knobs still
+   show their settings, but nothing here is being heard. */
+.ru.is-unpatched .eqm-scope,
+.ru.is-unpatched .eqcols { opacity: 0.72; }
+/* Bypass with nothing patched is a switch that cannot do anything, so it is
+   disabled rather than left to be pressed and have no effect. */
+.eqm-head .eq-band-power:disabled { opacity: 0.4; cursor: not-allowed; }
+.eqm-head .eq-band-power:disabled:hover { border-color: var(--hairline); }
+
+/* The scope well: a recess milled into the faceplate, glass sitting in it. */
+.eqm-scope {
+  flex: 0 0 auto;
+  height: 196px;
+  margin: 0 4px 4px 0;
+  border-radius: 4px;
+  border: 1px solid #050605;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.95),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 2px 0 4px rgba(0, 0, 0, 0.6),
+    inset -2px 0 4px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0 3px #1a1b18,
+    0 0 0 4px #0b0c0a,
+    0 2px 3px 4px rgba(0, 0, 0, 0.35);
+}
+/* The glass: a highlight down the top edge and a darkening at each side, so
+   the canvas reads as something behind a pane rather than a hole in the
+   faceplate. */
+.eqm-scope::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 22%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 6%,
+                    rgba(0, 0, 0, 0) 94%, rgba(0, 0, 0, 0.35));
+}
+.eqm-scope canvas { display: block; width: 100%; }
+.ru--screwed .eqm-scope--tall { height: 214px; }
+
+/* --- the band columns ---------------------------------------------------- */
+.eqcols {
+  display: flex;
+  flex: 0 0 470px;
+  width: 470px;
+  min-width: 0;
+  border-left: 1px solid var(--hairline);
+}
+.ru--screwed .eqcols { flex-basis: 424px; width: 424px; }
+
+.eqcol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+  width: 92px;
+  padding: 0 5px 0 7px;
+  border-right: 1px solid var(--hairline);
+  min-width: 0;
+}
+.eqcol:last-child,
+.ru--screwed .eqcols .eqcol:last-child { border-right: 0; }
+
+/* The name, reading down the column. */
+.eqcol-name {
+  writing-mode: vertical-rl;
+  font-family: var(--face-engrave);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #a5a79c;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+  white-space: nowrap;
+  line-height: 1;
+}
+/* The range the column's face advertises, and the range its Freq knob is
+   clamped to — the two are the same number by construction. */
+.eqcol-name-num {
+  font-family: var(--face-data);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #6e7067;
+  text-transform: none;
+  margin-top: 6px;
+}
+
+/* A band switched out of circuit goes grey on its face as well as dark on its
+   lamp: the lamp says what the switch is doing, the grey says what the band is
+   doing, and at a glance across five columns the second one reads faster. */
+.eqcol.is-off .eqcol-name,
+.eqcol.is-off .eqcol-name-num { color: #5b5d55; }
+
+.eqcol-knobs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.eqcol-knobs .knob { gap: 3px; }
+.eqcol-knobs .knob-label { font-size: 8.5px; }
+.eqcol-knobs--floor {
+  justify-content: flex-end;
+  align-self: stretch;
+  padding-bottom: 2px;
+}
+
+.eqcol-glyph {
+  display: block;
+  width: 22px;
+  height: 14px;
+  align-self: flex-start;
+  margin: 0 0 2px 0;
+}
+
+/* --- the vertical-title variant ------------------------------------------
+   Name down the left edge of the column, everything else stacked beside it. */
+.eqcol--v {
+  flex-direction: row;
+  gap: 6px;
+  align-items: stretch;
+}
+.eqcol-name--down {
+  writing-mode: vertical-rl;
+  transform: none;
+  padding-top: 0;
+  align-self: flex-start;
+  flex: 0 0 auto;
+}
+.eqcol-vbody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 6px;
+  position: relative;
+}
+.eqcol-vtop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 0;
+}
+.eqcol-vtop .eq-band-power { padding: 3px 4px; margin-left: auto; }
+.eqcol--v .eqcol-knobs { align-items: center; gap: 8px; }
+
+.eqcol--eq .eqcol-vbody { height: 100%; }
+.eqcol--eq .eqcol-knobs--floor { flex: 1 1 auto; justify-content: flex-end; gap: 6px; }
+.eqcol--eq .eqcol-glyph { align-self: flex-start; margin: 0 0 2px 0; }
+
+.ru--screwed .eqcol--eq { width: 84px; padding: 0 4px 0 6px; }
+.ru--screwed .eqcol--eq.eqcol--cut { width: 72px; }
+.ru--screwed .eqcol--eq .eqcol-knobs--floor { gap: 4px; }
+
+/* The head keys and the band lamps sit on the same baseline grid, so a key
+   and the lamp of the column under it are the same height. */
+.eqm-head .seg-keys .eq-band-power,
+.eqcol--eq .eqcol-vtop .eq-band-power { height: 17px; box-sizing: border-box; }
+
+/* --- unpatched -----------------------------------------------------------
+   Out of the signal path the whole faceplate reads back a step. Not hidden and
+   not disabled: the settings are still there to be read and still worth
+   setting up before the cable goes in. */
+.ru.is-unpatched .eqm-title,
+.ru.is-unpatched .ru-name { color: #7e8077; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ru .eq-band-lamp,
+  .ru .eq-band-power-text { transition: none; }
+}
+
+
+/* THE OUTER TITLE BAR IS SUPPRESSED FOR THIS UNIT ONLY.
+   Every panel gets a `.unit-title` from tray.js — an <h2> and a note. This
+   one is a rack unit with its own engraved nameplate down the left ear and a
+   title inside the faceplate, so the tray's bar was a third name for the same
+   device stacked above the other two.
+
+   Hidden rather than removed: studio.js keys each card's collapsed state on
+   the visible <h2>, so the element has to stay in the document. */
+.unit[data-meter="equalizer2"] > .unit-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* With the bar gone the card's own padding is all that frames the rack, and
+   the rack draws its own edges. */
+.unit[data-meter="equalizer2"] { padding-top: 10px; }

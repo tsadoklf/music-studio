@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music Studio</title>
+<meta name="description" content="A VU meter bridge and delivery check for tracks going to YouTube.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Sans:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="panel.css">
+<link rel="stylesheet" href="meters.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ===================================================== masthead ====
+       A fixed top bar. It does not scroll: the load bay, the workspace and
+       Reset are bench-level controls and a control you have to scroll back up
+       to find is one you stop using. studio.js measures its height into
+       --masthead-h / --rail-top, and the shell pads itself by that much, so
+       nothing is ever hidden underneath it.
+
+       The rail is: wordmark (a small engraved label at the left edge, over the
+       question rail), then the load bay, which is offset to start exactly
+       where the instrument column starts — the load buttons read as the head
+       of the transport column below them rather than as floating over the
+       chat. The readout and the master controls close the row. -->
+  <header class="masthead">
+    <div class="masthead-brand">
+      <h1>Music <em>Studio</em></h1>
+    </div>
+
+    <!-- Aligned with the instrument column by a left margin of exactly the
+         rail width plus the splitter and the two gaps — see .masthead-load. -->
+    <div class="masthead-load">
+      <button type="button" id="pick-audio" class="btn btn--small"
+              title="Open an audio file" aria-label="Open audio">Open audio</button>
+      <button type="button" id="pick-json" class="btn btn--small"
+              title="Open an analyze.py JSON" aria-label="Open analysis">Open analysis</button>
+    </div>
+
+    <div class="masthead-meta">
+      <div><b id="meta-rate">48.0 kHz</b> · <b id="meta-chans">stereo</b></div>
+      <div id="delivery-target">delivery target −14 LUFS / −1.0 dBTP</div>
+    </div>
+
+    <div class="masthead-controls">
+      <!-- Workspaces: a named arrangement of the whole bench — panel order and
+           row grouping, which meters are on, what is folded, the rail width and
+           the EQ. The tray button that meters.js adds lands in this same rail,
+           after these, which is the right order: the workspace is the larger
+           unit and the meter tray edits one part of it. -->
+      <div class="workspaces" id="workspaces">
+        <span class="workspaces-label" id="workspace-label">Workspace</span>
+        <select id="workspace-select" class="workspace-select"
+                aria-labelledby="workspace-label"
+                title="Load a saved arrangement of the bench"></select>
+        <button type="button" id="workspace-save" class="btn btn--small btn--icon"
+                title="Save the bench as it stands under a name"
+                aria-label="Save workspace">+</button>
+        <button type="button" id="workspace-delete"
+                class="btn btn--small btn--icon btn--danger"
+                title="Delete the selected workspace"
+                aria-label="Delete the selected workspace">&#215;</button>
+      </div>
+
+      <button type="button" id="reset-all" class="btn btn--small"
+              title="Return every meter to its rest position and unload the file">Reset</button>
+    </div>
+  </header>
+
+
+
+  <!-- ========================================================== ask ==== -->
+  <section class="unit ask-rail" aria-label="Ask about this measurement">
+    <div class="unit-title">
+      <h2>Ask</h2>
+      <span class="unit-note" id="ask-note">reads the measurements, recommends commands</span>
+    </div>
+
+    <!-- A conventional chat shape: the transcript scrolls, the composer is
+         pinned to the floor of the rail and never moves. -->
+    <div class="ask">
+      <div class="ask-out" id="ask-out" role="log" aria-live="polite"
+           aria-label="Conversation"></div>
+
+      <div class="ask-composer">
+        <details class="ask-presets" id="ask-presets">
+          <summary>Preset questions</summary>
+          <div class="ask-chips" id="ask-chips">
+            <button type="button" data-q="Is this ready to upload?">Is this ready to upload?</button>
+            <button type="button" data-q="Why does this sound dull?">Why does this sound dull?</button>
+            <button type="button" data-q="Is this over-compressed?">Over-compressed?</button>
+            <button type="button" data-q="What should I change before uploading?">What should I change?</button>
+          </div>
+        </details>
+
+        <div class="ask-row">
+          <input id="ask-input" type="text" autocomplete="off"
+            placeholder="Ask about this measurement…"
+            aria-label="A question about this measurement">
+          <button id="ask-go" type="button">Send</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================== splitter ==== -->
+  <div class="splitter" id="splitter" role="separator" tabindex="0"
+       aria-orientation="vertical" aria-label="Resize the question rail"
+       aria-valuemin="300" aria-valuemax="680" aria-valuenow="420"
+       title="Drag to resize · double-click to reset"><span></span></div>
+
+  <div class="instruments">
+
+  <!-- ===================================================== transport ====
+       First in the column and never folded: the thing that makes the rest of
+       the bench move cannot be behind a collapse control. -->
+  <section class="unit unit--striped" aria-label="Transport" data-card-id="transport"
+           data-no-collapse>
+    <!-- No title row. The transport keys say what this panel is better than
+         the word TRANSPORT ever did, and a heading plus subtitle cost a whole
+         band of vertical space at the very top of the bench.
+
+         What is kept is the machinery the title row carried, not its look:
+         this IS the `.unit-title` the drag and layout code reads — the drag
+         handle, the keyboard move target, and the element panelTitle() reads
+         the panel's name from. The <h2> is therefore still here and still
+         says "Transport", but visually-hidden, so the layout system and the
+         screen reader both still identify the panel while the faceplate shows
+         only the grip and the loaded-file name. `--title-slim` shrinks the
+         row to the height of that one line of text. -->
+    <div class="unit-title unit-title--slim">
+      <h2 class="visually-hidden">Transport</h2>
+      <span class="unit-note" id="source-name">no file loaded</span>
+    </div>
+
+    <div class="transport">
+      <div class="transport-keys" role="group" aria-label="Transport controls">
+        <!-- Two keys, not four. Play toggles to pause and back, which makes a
+             separate Pause key redundant; Stop was Pause-plus-rewind, which is
+             this pair used together. The glyphs carry the meaning, so the text
+             caps are gone — a transport is the one control surface where a
+             symbol needs no label. -->
+        <button type="button" id="rtz" class="key" title="Back to start"
+                aria-label="Back to start">
+          <span class="key-glyph" aria-hidden="true">&#171;</span>
+        </button>
+        <button type="button" id="play" class="key key--play" aria-pressed="false"
+                title="Play" aria-label="Play">
+          <span class="key-glyph" aria-hidden="true">&#9654;</span>
+        </button>
+      </div>
+
+      <div class="scrub-wrap">
+        <input type="range" id="scrub" class="scrub" min="0" max="1000"
+               value="0" step="1" aria-label="Scrub through the track">
+        <div class="timecode">
+          <span id="t-cur">0:00</span><span class="of"> / <span id="t-dur">0:00</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The readout strip: everything the transport knows about the piece,
+         in the faceplate's engraved-label / lamp-numeral pairing. An unknown
+         value prints an em-dash; nothing here is ever invented. -->
+    <div class="readouts" id="readouts">
+      <div class="readout" id="ro-bpm">
+        <span class="k">Tempo</span>
+        <span class="v"><span id="ro-bpm-v">—</span><span class="u" id="ro-meter"></span></span>
+      </div>
+      <div class="readout" id="ro-key">
+        <span class="k">Key</span>
+        <span class="v"><span id="ro-key-v">—</span></span>
+      </div>
+      <div class="readout">
+        <span class="k">LUFS-M</span>
+        <span class="v"><span id="ro-lufs-m">—</span></span>
+      </div>
+      <div class="readout">
+        <span class="k">LUFS-S</span>
+        <span class="v"><span id="ro-lufs-s">—</span></span>
+      </div>
+      <div class="readout">
+        <span class="k">True peak</span>
+        <span class="v"><span id="ro-tp">—</span> <span class="u">dBTP</span></span>
+      </div>
+      <div class="readout">
+        <span class="k">Corr</span>
+        <span class="v"><span id="ro-corr">—</span></span>
+      </div>
+      <div class="readout readout--wide">
+        <span class="k">Position</span>
+        <span class="v"><span id="ro-pos">0:00 / 0:00</span></span>
+      </div>
+      <div class="readout">
+        <span class="k">Bar · beat</span>
+        <span class="v"><span id="ro-bar">—</span></span>
+      </div>
+    </div>
+
+    <div class="analyse-bay">
+      <button type="button" id="analyse-now" class="btn btn--go">Analyse</button>
+      <label class="auto-toggle" for="analyse-auto">
+        <input type="checkbox" id="analyse-auto">
+        <span>auto</span>
+      </label>
+      <p class="loadbay-hint">
+        Drop a WAV or MP3 anywhere on the page, or an <kbd>analyze.py</kbd> JSON.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================================================== meter bridge ==== -->
+  <section class="unit unit--striped" aria-label="VU meter bridge" data-card-id="vu-bridge">
+    <div class="unit-title">
+      <h2>VU Meters</h2>
+      <span class="unit-note">300 ms ballistics · analogue reference</span>
+    </div>
+
+    <div class="bridge">
+      <div class="vu"><canvas id="vu-left" role="img"
+        aria-label="Left channel VU meter"></canvas></div>
+
+      <div class="bridge-centre">
+        <div id="peak-lamp" class="lamp" role="status"
+             aria-label="Peak indicator"></div>
+        <div class="lamp-label">Peak</div>
+        <div class="engrave channel-mode" id="channel-mode">Stereo</div>
+      </div>
+
+      <div class="vu"><canvas id="vu-right" role="img"
+        aria-label="Right channel VU meter"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ====================================================== digital ===== -->
+  <section class="unit unit--striped" aria-label="Digital metering" data-card-id="levels">
+    <div class="unit-title">
+      <h2>Levels &amp; Loudness</h2>
+      <span class="unit-note">true peak, 4× oversampled · BS.1770-4 loudness</span>
+    </div>
+
+    <div class="digital">
+      <div class="bars">
+        <h3 class="subhead">Peak dBFS</h3>
+        <canvas id="bars" role="img"
+          aria-label="True-peak bar meters for left and right, in dBFS"></canvas>
+      </div>
+
+      <div class="lufs">
+        <h3 class="subhead">Loudness</h3>
+        <div class="lufs-grid">
+          <div class="lufs-cell lufs-cell--primary">
+            <span class="k">Integrated</span>
+            <span class="v"><span id="lufs-i">−∞</span> <span class="u">LUFS</span></span>
+            <span class="delta" id="lufs-delta">target −14.0 LUFS</span>
+          </div>
+          <div class="lufs-cell">
+            <span class="k">Momentary</span>
+            <span class="v"><span id="lufs-m">−∞</span></span>
+          </div>
+          <div class="lufs-cell">
+            <span class="k">Short term</span>
+            <span class="v"><span id="lufs-s">−∞</span></span>
+          </div>
+          <div class="lufs-cell">
+            <span class="k">Range</span>
+            <span class="v"><span id="lra-v">—</span> <span class="u">LU</span></span>
+          </div>
+          <div class="lufs-cell">
+            <span class="k">Ceiling</span>
+            <span class="v">−1.0 <span class="u">dBTP</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="corr">
+        <h3 class="subhead">Correlation</h3>
+        <canvas id="corr" role="img"
+          aria-label="Stereo correlation, minus one to plus one"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================== analysis ==== -->
+  <section class="unit" aria-label="Analysis" data-card-id="analysis">
+    <div class="unit-title">
+      <h2>Analysis</h2>
+      <span class="unit-note">whole-file checks, then findings in time order</span>
+      <button type="button" id="analyze-run" class="btn btn--go btn--small">Analyze</button>
+    </div>
+
+    <div class="verdicts" id="verdicts" aria-live="polite"></div>
+
+    <div class="timeline" id="timeline" aria-live="polite"></div>
+  </section>
+
+  <!-- ====================================================== spectrum ==== -->
+  <section class="unit unit--striped" aria-label="Spectrum and colour map" data-card-id="spectrum-builtin">
+    <div class="unit-title">
+      <h2>Spectrum</h2>
+      <span class="unit-note" id="cutoff-note">no brick wall detected</span>
+    </div>
+
+    <div class="scope-stack">
+      <div class="scope">
+        <canvas id="spectrum" role="img"
+          aria-label="Live spectrum analyser on a logarithmic frequency axis"></canvas>
+      </div>
+      <div class="scope">
+        <canvas id="spectrogram" role="img"
+          aria-label="Spectrogram over time, inferno colour map"></canvas>
+      </div>
+      <div class="scope-legend">
+        <span><span class="swatch"></span>quiet → loud</span>
+        <span>log frequency, 20 Hz – 22 kHz</span>
+        <span>the 16 kHz guide marks where a lossy codec cuts</span>
+      </div>
+    </div>
+  </section>
+
+
+  </div>
+
+</div>
+
+<!-- The pickers, outside the shell: they are display:none, but inside a grid
+     even a hidden element is still an item the auto-placer steps over, which
+     pushed the rail into a row of its own. -->
+<input type="file" id="audio-input" accept="audio/*,.wav,.mp3,.m4a,.flac,.aiff">
+<input type="file" id="json-input" accept="application/json,.json">
+
+<script src="studio.js"></script>
+<!-- The meter bank. Ten classic scripts, loaded in dependency order: core
+     first, the two controls and the filter maths next, then the five meters,
+     then the tray, which names every meter factory and so must come last.
+     Each file is its own IIFE over a shared namespace; see widgets/README.md
+     for why this is not an ES module. -->
+<script src="widgets/core.js"></script>
+<script src="widgets/knob.js"></script>
+<script src="widgets/fader.js"></script>
+<script src="widgets/biquad.js"></script>
+<script src="widgets/waveform.js"></script>
+<script src="widgets/loudness-over-time.js"></script>
+<script src="widgets/goniometer.js"></script>
+<script src="widgets/spectrum.js"></script>
+<script src="widgets/dynamics.js"></script>
+<script src="widgets/mountain.js"></script>
+<script src="widgets/equalizer.js"></script>
+<script src="widgets/equalizer2.js"></script>
+<script src="widgets/maximizer.js"></script>
+<script src="widgets/tray.js"></script>
+</body>
+</html>

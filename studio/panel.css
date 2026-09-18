@@ -1,0 +1,2647 @@
+/* ============================================================================
+   Music Studio — faceplate styles
+   A single committed visual world: warm anthracite metal, backlit cream dials.
+   No light theme; every colour is painted explicitly so the page holds on any
+   host ground.
+   ========================================================================= */
+
+:root {
+  /* --- panel metal ------------------------------------------------------ */
+  --panel:        #20211f;   /* brushed anthracite, warm-green bias */
+  --panel-hi:     #32342f;   /* upper bevel catch-light */
+  --panel-lo:     #141513;   /* lower bevel shadow */
+  --panel-deep:   #0d0e0c;   /* recessed wells, page ground */
+  --hairline:     #3d3f39;
+
+  /* --- dial ------------------------------------------------------------- */
+  --dial:         #e8d5a8;   /* cream/amber dial card */
+  --dial-warm:    #f2e2bc;   /* lamp hotspot near the centre */
+  --dial-edge:    #c4ab79;   /* dial card falling into shade at the rim */
+  --ink:          #1a1712;   /* engraved black lettering */
+  --ink-soft:     #5b513f;
+
+  /* --- accents ---------------------------------------------------------- */
+  --gold:         #a8894e;   /* pinstripes, engraved label fill */
+  --gold-lit:     #d8b877;
+  --red:          #c4291f;   /* over-zero zone, PEAK lamp */
+  --red-lit:      #ff4a35;
+  --lamp:         #ffb454;   /* tungsten backlight bleed */
+
+  /* --- semantic (verdicts) — deliberately separate from --gold ---------- */
+  --ok:           #6f9f72;
+  --warn:         #d9a441;
+  --bad:          #cf5340;
+
+  /* --- type ------------------------------------------------------------- */
+  --face-engrave: "Bebas Neue", "Oswald", "Haettenschweiler",
+                  "Arial Narrow", sans-serif;
+  --face-data:    "Spline Sans Mono", "SF Mono", "Menlo", "Consolas", monospace;
+  --face-text:    "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+
+  /* --- rhythm ----------------------------------------------------------- */
+  --gap:          clamp(14px, 2.2vw, 22px);
+  --rack-radius:  5px;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  /* No top gutter: the fixed masthead owns the top of the window and .shell
+     opens its own room for it with padding-top: var(--masthead-h). A gutter
+     here as well would be a second, dead strip above the first panel. */
+  padding-top: 0;
+  padding-bottom: clamp(18px, 4vw, 40px);
+  padding-left: clamp(16px, 4vw, 40px);
+  padding-right: clamp(16px, 4vw, 40px);
+  background: var(--panel-deep);
+  /* faint room light falling from the upper left, as on a shelf */
+  background-image:
+    radial-gradient(120% 80% at 18% -10%, #23241f 0%, transparent 60%),
+    radial-gradient(90% 70% at 90% 110%, #17181500 0%, #000 100%);
+  color: var(--dial);
+  font-family: var(--face-text);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  max-width: 1560px;
+  margin: 0 auto;
+  /* Three columns: the question rail, the machined seam that resizes it, and
+     the instruments. The masthead spans all three. The rail width is a custom
+     property so the splitter can move it live without touching layout code;
+     the instruments take whatever is left, since meters and spectrograms want
+     every pixel. */
+  --rail-w: 420px;
+  display: grid;
+  grid-template-columns: var(--rail-w) auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--gap);
+}
+
+/* The masthead is `position: fixed` (see its own section) and so is NOT a grid
+   item any more. It therefore reserves no space of its own, and the shell has
+   to open the gap itself — otherwise the first panel and the top of the
+   question rail sit underneath the bar.
+
+   --masthead-h is measured by studio.js on every resize (the bar's type is
+   clamp()ed and it wraps at narrow widths, so no CSS constant would hold) and
+   already includes the gap that belongs under it. The 96px fallback is a sane
+   standing value for the single frame before that measurement runs. */
+.shell { padding-top: var(--masthead-h, 96px); }
+
+.instruments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;           /* so canvases can shrink rather than force a scrollbar */
+}
+
+/* The rail is a chat window, not a card that grows: it is exactly as tall as
+   the viewport allows and never taller, so the composer pinned to its floor is
+   on screen from the moment the page opens and is never reached by scrolling.
+   Two things come off the viewport height: body's own vertical gutter, and the
+   masthead the rail sits below — without that second term the rail is a full
+   viewport tall but starts a masthead down, and its floor falls off the bottom
+   of the screen. --masthead-h is measured and set by studio.js, and the 96px
+   here is a sane standing value for the frame before that runs. */
+.ask-rail {
+  /* !important because .unit — which this element also carries — sets
+     `position: relative` further down the sheet at equal specificity and would
+     otherwise win. A relative box does not clamp against the viewport: it just
+     takes `top` as a downward shift, which is exactly the dead strip that used
+     to sit above the rail. */
+  position: sticky !important;
+  /* Its own natural offset: gutter + masthead + the grid gap under it. Sticking
+     at anything else makes the rail jump the moment the page scrolls, because
+     the position it is pinned to is not the position it was laid out at. */
+  top: var(--rail-top, 96px);
+  display: flex;
+  flex-direction: column;
+  /* From that offset down to the floor of the viewport — no page gutter is
+     subtracted at the bottom, which is where the dead strip came from: the
+     rail stopped a gutter short and the composer floated above the edge. */
+  height: calc(100vh - var(--rail-top, 96px));
+  max-height: calc(100vh - var(--rail-top, 96px));
+  min-height: 320px;      /* below this a chat is unusable; let the page scroll */
+}
+
+.ask-rail .ask {
+  flex: 1;
+  min-height: 0;
+}
+
+.ask-rail .ask-out {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;       /* the transcript scrolls, the composer does not move */
+  /* The rail is taller than most answers. Left plain, the empty lower half
+     reads as something failed to load; as a recessed well it reads as the
+     space the conversation grows into. */
+  background: linear-gradient(180deg, #121311 0%, #101109 100%);
+  box-shadow: inset 0 1px 0 #2a2c26, inset 0 -18px 24px -22px #000;
+}
+
+/* ============================================================================
+   Splitter — a machined seam between the rail and the instruments
+   ========================================================================= */
+
+.splitter {
+  align-self: stretch;
+  /* sticky is also a positioned ancestor, so the knurl below anchors to it */
+  position: sticky;
+  top: var(--rail-top, 96px);
+  /* the same height as the rail it parts, so the seam runs its full edge */
+  height: calc(100vh - var(--rail-top, 96px) - clamp(18px, 4vw, 40px));
+  min-height: 320px;
+  width: 11px;
+  flex: 0 0 auto;
+  cursor: col-resize;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+
+/* The seam itself: a parting line cut into the faceplate — shadow on the left
+   lip, the room light catching the right one. It has to be legible at rest or
+   nobody finds it, so the lit lip is a real highlight rather than a hint. */
+.splitter > span {
+  display: block;
+  width: 5px;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    #000 0%, #0a0b09 34%, #2b2d27 62%, #55574f 78%, #24261f 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  transition: background 120ms linear, box-shadow 120ms linear;
+}
+
+/* The knurled grip: milled ridges at the midpoint, where a thumb would take
+   it. This is the part that says "hold me", so it reads gold at rest. */
+.splitter::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 46px;
+  border-radius: 3px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    var(--gold-lit) 0px, var(--gold-lit) 1px,
+    #0a0b09 1px, #0a0b09 4px
+  );
+  box-shadow: inset 0 0 0 1px #000;
+  opacity: 0.72;
+  pointer-events: none;
+  transition: opacity 120ms linear, box-shadow 120ms linear;
+}
+
+.splitter:hover > span,
+.splitter.is-dragging > span {
+  background: linear-gradient(90deg,
+    #000 0%, #14100a 34%, #6b5730 62%, var(--gold-lit) 78%, #2a2114 100%);
+}
+
+.splitter:hover::after,
+.splitter.is-dragging::after {
+  opacity: 1;
+  box-shadow: inset 0 0 0 1px #000, 0 0 10px 1px rgba(216, 184, 119, 0.35);
+}
+
+.splitter:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* while dragging, nothing else on the page should select or catch the pointer */
+body.is-splitting {
+  cursor: col-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================================
+   Rack unit — the shared chassis every module sits in
+   ========================================================================= */
+
+.unit {
+  position: relative;
+  border-radius: var(--rack-radius);
+  background:
+    linear-gradient(180deg, var(--panel-hi) 0%, var(--panel) 7%,
+                            var(--panel) 93%, var(--panel-lo) 100%);
+  box-shadow:
+    inset 0 1px 0 #43453e,
+    inset 0 -1px 0 #0a0b09,
+    0 10px 28px -12px #000,
+    0 1px 0 #000;
+  padding: clamp(14px, 2.4vw, 22px);
+  overflow: hidden;
+}
+
+/* brushed-metal grain: fine vertical striations, very low contrast */
+.unit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.022) 0px,
+    rgba(255, 255, 255, 0.022) 1px,
+    rgba(0, 0, 0, 0.022) 1px,
+    rgba(0, 0, 0, 0.022) 2px
+  );
+  opacity: 0.55;
+}
+
+.unit > * { position: relative; }
+
+/* the gold pinstripe that runs the width of a faceplate */
+.unit--striped::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%, var(--gold) 6%, var(--gold-lit) 50%,
+    var(--gold) 94%, transparent 100%);
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   Engraved lettering
+   ========================================================================= */
+
+.engrave {
+  font-family: var(--face-engrave);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: #9a9c92;
+  /* cut into the metal: dark above, light catching the lower lip */
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+  text-transform: uppercase;
+}
+
+.unit-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.unit-title h2 {
+  margin: 0;
+  font-family: var(--face-engrave);
+  font-size: clamp(15px, 1.7vw, 19px);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  color: #a5a79c;
+  text-transform: uppercase;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+}
+
+.unit-note {
+  font-family: var(--face-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #6e7067;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A title row with no visible heading — the Transport's. It still exists as an
+   element because the layout system reads `.unit-title` as the drag handle and
+   takes the panel's name from its <h2>, but there is nothing to show except
+   the loaded-file note and the grip, so it collapses to one line of text and
+   gives the space back to the panel body. */
+.unit-title--slim {
+  margin-bottom: 8px;
+  min-height: 18px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+/* This row has no visible heading, so the note IS the first line — it must
+   never be pushed onto a second one by the narrow-panel rule below, which
+   exists to get a note out from under a long engraved title. With nothing
+   above it there is nothing to get out from under, and obeying that rule left
+   the placement key stranded on a line of its own over empty faceplate. */
+.unit-title--slim > .unit-note {
+  order: 0;
+  flex: 1 1 auto;
+  margin-top: 0;
+}
+
+/* ============================================================================
+   Masthead
+   ========================================================================= */
+
+/* A FIXED faceplate rail across the top of the window. It is taken out of the
+   shell grid entirely — `position: fixed` — so the instruments scroll beneath
+   it and the bench-level controls (load, workspace, Reset, the meter tray) are
+   reachable from any scroll position.
+
+   Because it no longer occupies a grid row, the shell has to make the room
+   itself: studio.js measures this bar into --masthead-h and .shell takes that
+   as top padding. The same measurement already fed --rail-top, which the
+   sticky question rail and the splitter are pinned to, so all three agree by
+   construction.
+
+   The order across the rail is wordmark, load bay, readout, master controls —
+   a left-to-right scan from "what this is" to "what it is showing" to "what
+   you can do to the whole bench". */
+.masthead {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;         /* over the panels, under the drop-zone overlay (54/55) */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* The metal runs the full width of the window, but the CONTENT is held to
+     the same measure as .shell and starts on the same line, so the bar's
+     columns line up with the bench's columns. Without this the bar started at
+     the window edge while the shell was centred inside its 1560px maximum, and
+     the load bay — offset by the rail's width — landed short of the instrument
+     column by exactly the shell's left margin.
+
+     --shell-left is the shell's real left edge, measured by studio.js. It is
+     measured rather than computed from 100vw because vw includes the
+     scrollbar and the shell's box does not, which would put the two a
+     scrollbar's width apart on every platform that reserves one. */
+  padding: 8px var(--shell-left, clamp(16px, 4vw, 40px));
+  /* Opaque: panels scroll under it and must not ghost through. Same metal as
+     a rack unit, with the gold pinstripe as its lower edge. */
+  background:
+    linear-gradient(180deg, var(--panel-hi) 0%, var(--panel) 34%,
+                            var(--panel-lo) 100%);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: 0 6px 18px -8px #000, 0 1px 0 #000;
+}
+
+/* the gold pinstripe, as on a striped rack unit — it makes the bar read as a
+   faceplate edge rather than a web toolbar */
+.masthead::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%, var(--gold) 6%, var(--gold-lit) 50%,
+    var(--gold) 94%, transparent 100%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* The wordmark is a LABEL, not a headline: small, engraved, hard against the
+   left edge, sitting over the question rail the way a maker's plate sits in
+   the corner of a faceplate.
+
+   It is given the WIDTH OF THE RAIL rather than its natural width, which is
+   what makes the load bay behind it start exactly where the instrument column
+   starts — one term instead of a margin computed from a measured wordmark. It
+   may shrink below that (flex-shrink 1) so a narrow window crowds the label
+   rather than pushing the controls off the end. */
+.masthead-brand {
+  /* Does NOT shrink. Its width is a measurement — the rail's column — and a
+     flex-shrink that trimmed it would slide the load bay off the instrument
+     column's edge, which is the one thing this element exists to prevent. The
+     readout beside it is what gives way when the bar runs out of room, and
+     below 900px the readout is dropped entirely. */
+  flex: 0 0 auto;
+  /* The rail's own column, exactly: rail width + the splitter (11px) + the
+     grid gap either side of it. The bar's left padding is already the shell's
+     left edge (--shell-left), so this measures from the same origin the grid
+     does and no further correction is needed. */
+  width: calc(var(--rail-w, 420px) + 11px + (var(--gap) * 2));
+  min-width: 0;
+  overflow: hidden;
+  /* The bar's own flex gap would be added on top of that width and push the
+     load bay a gap past the column edge, so it is taken back here. The
+     wordmark's box is the measurement; the gap after it is not part of it. */
+  margin-right: -14px;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-family: var(--face-engrave);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  line-height: 1.1;
+  color: #b8b3a4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 -1px 0 #0a0b09, 0 1px 0 #494b43;
+}
+
+.masthead h1 em {
+  font-style: normal;
+  color: var(--gold);
+}
+
+/* The load bay reads as the head of the TRANSPORT COLUMN, not as something
+   floating over the chat rail: the wordmark before it is exactly as wide as
+   the rail, so these two buttons begin on the instrument column's left edge.
+   --rail-w lives on .shell (the splitter writes it live) and is mirrored onto
+   :root by studio.js so the rules here can read it. */
+.masthead-load {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.masthead-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #6e7067;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.masthead-meta b {
+  color: #9a9c92;
+  font-weight: 500;
+}
+
+/* The master controls close the rail, hard against the right edge. `auto`
+   rather than `justify-content: space-between` on the bar, so the load bay
+   stays glued to the instrument column's edge instead of being spread. */
+.masthead-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* ============================================================================
+   Meter bridge — the hero
+   ========================================================================= */
+
+.bridge {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(10px, 2vw, 26px);
+}
+
+.vu {
+  position: relative;
+  /* the lit dial well, recessed into the panel */
+  border-radius: 3px;
+  padding: 7px;
+  background: linear-gradient(180deg, #0c0d0b, #141512);
+  box-shadow:
+    inset 0 2px 5px #000,
+    0 1px 0 #40423b;
+}
+
+.vu canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+}
+
+/* glass: a single soft diagonal reflection across the upper-left of the face */
+.vu::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    148deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.05) 26%,
+    rgba(255, 255, 255, 0) 47%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+}
+
+/* ---- centre stack: PEAK lamp between the two dials --------------------- */
+
+.bridge-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-inline: clamp(2px, 1vw, 10px);
+}
+
+.lamp {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #6b1a14, #2a0a07 70%);
+  box-shadow:
+    inset 0 1px 2px #000,
+    inset 0 -1px 1px #5a1712,
+    0 0 0 3px #1a1b18,
+    0 0 0 4px #3a3c35;
+  transition: background 140ms linear, box-shadow 140ms linear;
+}
+
+.lamp.lit {
+  background: radial-gradient(circle at 34% 30%, #ffd9c4, var(--red-lit) 42%, #8d1a10 100%);
+  box-shadow:
+    inset 0 1px 2px #ff9a80,
+    0 0 0 3px #1a1b18,
+    0 0 0 4px #3a3c35,
+    0 0 14px 2px rgba(255, 74, 53, 0.65),
+    0 0 34px 8px rgba(255, 74, 53, 0.22);
+}
+
+.lamp-label {
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: #86887e;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+}
+
+.bridge-centre .engrave.channel-mode {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-shadow: 0 -1px 0 #0c0d0b;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   Transport
+   ========================================================================= */
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.8vw, 18px);
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--face-engrave);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #b9bbb0;
+  /* a real pushbutton: light top edge, dark underside, deep shadow */
+  background: linear-gradient(180deg, #3a3c36 0%, #262823 52%, #1c1e1a 100%);
+  border: 1px solid #101109;
+  border-radius: 3px;
+  padding: 9px 18px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 #55574f,
+    inset 0 -2px 3px #0c0d0b,
+    0 2px 4px -1px #000;
+  transition: transform 60ms linear, box-shadow 60ms linear, color 120ms linear;
+}
+
+.btn:hover { color: var(--gold-lit); }
+
+.btn:active,
+.btn[aria-pressed="true"] {
+  transform: translateY(1px);
+  color: var(--lamp);
+  box-shadow:
+    inset 0 2px 5px #000,
+    inset 0 -1px 0 #45473f;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+  color: #7c7e75;
+}
+
+/* ---- transport pushbuttons ---------------------------------------------
+   Square-ish machined keys in a gang, the way a deck's transport is a row of
+   keys under one bezel rather than four separate web buttons. The glyph is the
+   control; the engraved cap under it names what the glyph means. */
+
+.transport-keys {
+  display: flex;
+  gap: 1px;
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 4px;
+  background: #101109;
+  box-shadow: inset 0 2px 5px #000, 0 1px 0 #40423b;
+}
+
+.key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* Squared off, because the engraved cap under the glyph is gone: keeping the
+     old 54px width with only a symbol on the face left a short wide key that
+     read as a tab rather than a transport button. */
+  min-width: 42px;
+  min-height: 38px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border: 1px solid #101109;
+  border-radius: 2px;
+  color: #b9bbb0;
+  background: linear-gradient(180deg, #3a3c36 0%, #262823 52%, #1c1e1a 100%);
+  box-shadow:
+    inset 0 1px 0 #55574f,
+    inset 0 -2px 3px #0c0d0b,
+    0 2px 4px -1px #000;
+  transition: transform 60ms linear, box-shadow 60ms linear, color 120ms linear;
+}
+
+.key-glyph {
+  /* The glyph now carries the whole meaning of the key, so it is bigger. */
+  font-size: 19px;
+  line-height: 1;
+  /* the glyph is the lit part of the key face */
+  color: #c9cbc0;
+  text-shadow: 0 1px 0 #0c0d0b;
+}
+
+.key-cap {
+  font-family: var(--face-engrave);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #86887e;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+}
+
+.key:hover { color: var(--gold-lit); }
+.key:hover .key-glyph { color: var(--gold-lit); }
+.key:hover .key-cap { color: var(--gold); }
+
+.key:active,
+.key.is-latched {
+  transform: translateY(1px);
+  color: var(--lamp);
+  box-shadow: inset 0 2px 5px #000, inset 0 -1px 0 #45473f;
+}
+
+/* A latched key is a lit key: the glyph takes the lamp and glows, the way a
+   depressed transport button on a deck lights from behind. */
+.key:active .key-glyph,
+.key.is-latched .key-glyph {
+  color: var(--lamp);
+  text-shadow: 0 0 10px rgba(255, 180, 84, 0.55);
+}
+
+.key.is-latched .key-cap { color: var(--gold); }
+
+.key[disabled] .key-glyph { color: #6d6f66; text-shadow: none; }
+
+.key:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+
+.key[disabled] { opacity: 0.35; cursor: not-allowed; color: #7c7e75; }
+.key[disabled]:hover .key-cap { color: #86887e; }
+
+/* Play is the primary key, so it is the wide one. */
+.key--play { min-width: 66px; }
+
+/* ---- readout strip -------------------------------------------------------
+   Engraved label over a lamp-lit numeral, in a row of recessed cells: the
+   same well treatment as the LUFS grid, so the two read as one instrument. */
+
+.readouts {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.readout {
+  background: linear-gradient(180deg, #17181500, #0e0f0d);
+  background-color: #121311;
+  padding: 8px 11px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.readout--wide { grid-column: span 2; }
+
+.readout .k {
+  font-family: var(--face-engrave);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: #74766d;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.readout .v {
+  font-family: var(--face-data);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: var(--lamp);
+  text-shadow: 0 0 10px rgba(255, 180, 84, 0.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.readout .u {
+  font-size: 0.68em;
+  color: #6e7067;
+  text-shadow: none;
+  letter-spacing: 0.04em;
+  margin-left: 0.35em;
+}
+
+/* A value the analyser was not sure of is shown, but shown as doubted: dimmed,
+   with a raised question mark. Never dropped — a low-confidence reading is
+   still a reading — and never stated flatly either. */
+.readout.is-unsure .v {
+  color: #8d7f62;
+  text-shadow: none;
+}
+
+.readout.is-unsure .v::after {
+  content: "?";
+  font-size: 0.7em;
+  vertical-align: super;
+  margin-left: 0.15em;
+  color: var(--warn);
+}
+
+/* ---- analyse bay -------------------------------------------------------- */
+
+.analyse-bay {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 16px);
+  flex-wrap: wrap;
+}
+
+/* The auto latch: a milled tick box, not a browser checkbox. */
+.auto-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #86887e;
+  flex: 0 0 auto;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+}
+
+.auto-toggle:hover { color: var(--gold-lit); }
+
+.auto-toggle input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border-radius: 2px;
+  border: 1px solid #101109;
+  background: linear-gradient(180deg, #16170f, #0b0c0a);
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 #43453e;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.auto-toggle input:checked {
+  background: radial-gradient(circle at 40% 32%, var(--lamp), #6b4a18 78%);
+  box-shadow: inset 0 1px 2px #ffd79a, 0 0 8px 1px rgba(255, 180, 84, 0.35);
+}
+
+.auto-toggle input:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+
+/* The ANALYSE key while it is working: a lamp sweeping left to right across
+   the key face, so "running" is visible without a number nobody can verify. */
+#analyse-now.is-running {
+  color: var(--lamp);
+  cursor: progress;
+  background-image:
+    linear-gradient(90deg,
+      rgba(255, 180, 84, 0) 0%,
+      rgba(255, 180, 84, 0.30) 42%,
+      rgba(255, 180, 84, 0.30) 58%,
+      rgba(255, 180, 84, 0) 100%),
+    linear-gradient(180deg, #3d3020, #241b10);
+  background-size: 55% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  animation: analyse-sweep 1.1s linear infinite;
+}
+
+@keyframes analyse-sweep {
+  from { background-position: -60% 0, 0 0; }
+  to   { background-position: 160% 0, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #analyse-now.is-running { animation: none; background-position: 22% 0, 0 0; }
+}
+
+/* a secondary-size pushbutton, for a title row or the masthead */
+.btn--small {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  padding: 5px 13px;
+}
+
+/* ---- scrub ------------------------------------------------------------- */
+
+.scrub-wrap {
+  flex: 1 1 220px;
+  min-width: 150px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+input[type="range"].scrub {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+input[type="range"].scrub::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #0b0c0a, #1c1e1a);
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 #43453e;
+}
+
+input[type="range"].scrub::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #0b0c0a, #1c1e1a);
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 #43453e;
+}
+
+/* a milled metal knob, not a dot */
+input[type="range"].scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2a2c27, #7d7f75 32%, #b9bbb0 50%, #7d7f75 68%, #2a2c27);
+  border: 1px solid #0d0e0c;
+  box-shadow: 0 1px 3px #000;
+}
+
+input[type="range"].scrub::-moz-range-thumb {
+  width: 13px;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2a2c27, #7d7f75 32%, #b9bbb0 50%, #7d7f75 68%, #2a2c27);
+  border: 1px solid #0d0e0c;
+  box-shadow: 0 1px 3px #000;
+}
+
+input[type="range"].scrub:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 3px; }
+
+.timecode {
+  font-family: var(--face-data);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--lamp);
+  white-space: nowrap;
+  text-shadow: 0 0 9px rgba(255, 180, 84, 0.35);
+}
+
+.timecode .of { color: #6e7067; text-shadow: none; }
+
+/* ---- source name ------------------------------------------------------- */
+
+.source-name {
+  font-family: var(--face-data);
+  font-size: 12px;
+  color: #8b8d83;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  flex: 1 1 160px;
+}
+
+.source-name b { color: var(--dial); font-weight: 500; }
+
+/* ============================================================================
+   Digital section
+   ========================================================================= */
+
+.digital {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: clamp(14px, 2.4vw, 26px);
+  align-items: start;
+}
+
+.subhead {
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: #7e8077;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+}
+
+/* ---- dBFS bars --------------------------------------------------------- */
+
+.bars canvas,
+.corr canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---- LUFS readouts ----------------------------------------------------- */
+
+.lufs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lufs-cell {
+  background: linear-gradient(180deg, #17181500, #0e0f0d);
+  background-color: #121311;
+  padding: 9px 11px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lufs-cell .k {
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #74766d;
+  text-transform: uppercase;
+}
+
+.lufs-cell .v {
+  font-family: var(--face-data);
+  font-size: clamp(17px, 2.5vw, 23px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  color: var(--lamp);
+  text-shadow: 0 0 10px rgba(255, 180, 84, 0.3);
+}
+
+.lufs-cell .u {
+  font-size: 0.55em;
+  color: #6e7067;
+  text-shadow: none;
+  letter-spacing: 0.04em;
+}
+
+/* the integrated cell is the one that decides the upload — give it the weight */
+.lufs-cell--primary { grid-column: 1 / -1; }
+.lufs-cell--primary .v { font-size: clamp(24px, 4vw, 34px); }
+
+.lufs-cell .delta {
+  font-family: var(--face-data);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #7e8077;
+}
+
+.lufs-cell .delta.ok   { color: var(--ok); }
+.lufs-cell .delta.warn { color: var(--warn); }
+.lufs-cell .delta.bad  { color: var(--bad); }
+
+/* ---- correlation ------------------------------------------------------- */
+
+.corr { display: flex; flex-direction: column; }
+
+/* ============================================================================
+   Spectrum + spectrogram
+   ========================================================================= */
+
+.scope-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scope {
+  position: relative;
+  border-radius: 3px;
+  background: #07080a;
+  box-shadow: inset 0 2px 6px #000, 0 1px 0 #40423b;
+  overflow: hidden;
+}
+
+.scope canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.scope-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--face-data);
+  font-size: 10.5px;
+  color: #6e7067;
+  letter-spacing: 0.05em;
+}
+
+.scope-legend .swatch {
+  display: inline-block;
+  width: 62px;
+  height: 8px;
+  border-radius: 1px;
+  vertical-align: middle;
+  margin-right: 6px;
+  /* inferno stops, matching the JS colormap */
+  background: linear-gradient(90deg,
+    #000004, #1b0c41, #4a0c6b, #781c6d, #a52c60,
+    #cf4446, #ed6925, #fb9b06, #f7d13d, #fcffa4);
+}
+
+.cutoff-flag {
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   Verdict panel
+   ========================================================================= */
+
+.verdicts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  background: #101109;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.verdict {
+  background: #121311;
+  padding: 13px 15px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* severity reads as a stripe on the leading edge, not a coloured card */
+  border-left: 3px solid #3a3c35;
+}
+
+.verdict[data-state="ok"]   { border-left-color: var(--ok); }
+.verdict[data-state="warn"] { border-left-color: var(--warn); }
+.verdict[data-state="bad"]  { border-left-color: var(--bad); }
+.verdict[data-state="idle"] { border-left-color: #3a3c35; }
+
+.verdict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.verdict-head .k {
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #8b8d83;
+  text-transform: uppercase;
+}
+
+.pill {
+  font-family: var(--face-data);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  color: #7e8077;
+  white-space: nowrap;
+}
+
+.verdict[data-state="ok"]   .pill { color: var(--ok); }
+.verdict[data-state="warn"] .pill { color: var(--warn); }
+.verdict[data-state="bad"]  .pill { color: var(--bad); }
+
+.verdict-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9a9c92;
+  margin: 0;
+  max-width: 60ch;
+}
+
+.verdict-body b {
+  color: var(--dial);
+  font-weight: 500;
+  font-family: var(--face-data);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.94em;
+}
+
+/* ============================================================================
+   Load bay — drop target + inputs
+   ========================================================================= */
+
+.loadbay-hint {
+  flex: 1 1 200px;
+  font-size: 13px;
+  color: #7e8077;
+  min-width: 0;
+}
+
+.loadbay-hint kbd {
+  font-family: var(--face-data);
+  font-size: 11.5px;
+  color: var(--gold-lit);
+  background: #0d0e0c;
+  border: 1px solid #2c2e28;
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+
+input[type="file"] { display: none; }
+
+/* whole-page drop state */
+body.dropping::after {
+  content: "RELEASE TO LOAD";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  font-family: var(--face-engrave);
+  font-size: clamp(22px, 5vw, 42px);
+  letter-spacing: 0.26em;
+  color: var(--lamp);
+  background: rgba(8, 9, 7, 0.86);
+  border: 2px dashed var(--gold);
+  pointer-events: none;
+}
+
+/* ============================================================================
+   Responsive — the bridge stacks, the lamp moves between the dials
+   ========================================================================= */
+
+@media (max-width: 860px) {
+  .digital { grid-template-columns: 1fr 1fr; }
+  .corr { grid-column: 1 / -1; }
+}
+
+@media (max-width: 620px) {
+  .bridge {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .bridge-centre {
+    flex-direction: row;
+    justify-content: center;
+    gap: 14px;
+    order: 2;
+  }
+  .vu:first-child  { order: 1; }
+  .vu:last-child   { order: 3; }
+  .digital { grid-template-columns: 1fr; }
+  .masthead-meta { text-align: left; }
+  .lufs-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lamp, .btn { transition: none; }
+}
+
+/* ======================================================================= ask
+ * The conversational panel. Same recessed-well treatment as the scopes, so it
+ * reads as part of the instrument rather than a chat widget bolted on.
+ * ========================================================================= */
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The composer is the floor of the rail: it keeps its natural height while the
+   transcript above takes every remaining pixel, so nothing the conversation
+   does can push the input off screen. */
+.ask-composer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* The preset chips fold away behind one line, so a long list of them can never
+   shove the composer around. */
+.ask-presets > summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--face-engrave);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7e8077;
+  padding: 2px 0;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #43453e;
+}
+
+.ask-presets > summary::-webkit-details-marker { display: none; }
+
+.ask-presets > summary::before {
+  content: "+ ";
+  color: var(--gold);
+}
+
+.ask-presets[open] > summary::before { content: "− "; }
+
+.ask-presets > summary:hover { color: var(--gold-lit); }
+
+.ask-presets > summary:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.ask-presets[open] .ask-chips { margin-top: 8px; }
+
+#ask-input {
+  flex: 1;
+  min-width: 0;                      /* so it can shrink inside the flex row */
+  background: var(--panel-deep);
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 9px 12px;
+  color: #d8d4c8;
+  font-family: var(--face-text);
+  font-size: 14px;
+}
+
+#ask-input::placeholder { color: #6a6a60; }
+
+#ask-input:focus-visible,
+.ask-chips button:focus-visible,
+#ask-go:focus-visible,
+.ask-copy:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+#ask-go,
+.ask-copy {
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  color: var(--gold-lit);
+  font-family: var(--face-engrave);
+  font-size: 15px;
+  letter-spacing: 0.10em;
+  padding: 9px 18px;
+  cursor: pointer;
+}
+
+#ask-go:hover,
+.ask-copy:hover { border-color: var(--gold); color: #f0dcae; }
+
+.ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ask-chips button {
+  background: #16170f;
+  border: 1px solid #2e302a;
+  border-radius: 999px;
+  color: #9a9488;
+  font-family: var(--face-text);
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.ask-chips button:hover { border-color: var(--gold); color: #d6c9a8; }
+
+.ask-out {
+  background: #121311;
+  border: 1px solid #101109;
+  border-left: 3px solid #3a3c35;
+  border-radius: 3px;
+  padding: 13px 15px;
+  /* The transcript is a column of turns, oldest first, newest at the floor. */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ask-hint {
+  margin: 0;
+  color: #8b8578;
+  font-family: var(--face-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* ---- turns ---------------------------------------------------------------
+   The two speakers are told apart by side, ground and edge, not by a label:
+   the operator's own words sit right on a lit strip, the machine's answers sit
+   left against the panel with a gold rule down their leading edge. */
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  max-width: 92%;
+}
+
+.turn-who {
+  font-family: var(--face-engrave);
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #6e7067;
+  margin-bottom: 3px;
+}
+
+.turn-body {
+  border-radius: 3px;
+  padding: 9px 12px 10px;
+  font-family: var(--face-text);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #cdc8bb;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.turn-body > :first-child { margin-top: 0; }
+.turn-body > :last-child  { margin-bottom: 0; }
+
+.turn-body p { margin: 0 0 8px; }
+.turn-body b { color: #f0e6cf; }
+
+.turn-body code {
+  color: var(--lamp);
+  font-family: var(--face-data);
+  font-size: 12.5px;
+}
+
+/* the operator: aligned to the trailing edge, on warmer metal */
+.turn--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.turn--user .turn-body {
+  background: linear-gradient(180deg, #2b2a20, #1e1d16);
+  border: 1px solid #3a3526;
+  border-right: 3px solid var(--gold);
+  color: #e2dbc8;
+  text-align: left;
+}
+
+/* the machine: aligned to the leading edge, recessed into the panel */
+.turn--assistant { align-self: flex-start; }
+
+.turn--assistant .turn-body {
+  background: #16170f;
+  border: 1px solid #22241e;
+  border-left: 3px solid var(--gold);
+}
+
+/* a refusal or a transport failure is still the machine speaking, but it is
+   not an answer, and must not look like one */
+.turn--error .turn-body {
+  border-left-color: var(--bad);
+  color: #d9bdb3;
+}
+
+/* the page talking about itself — not connected, no file — is a third voice:
+   quieter than either party, centred, no bubble */
+.turn--system {
+  align-self: stretch;
+  max-width: none;
+}
+
+.turn--system .turn-body {
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  padding: 8px 0;
+  color: #8b8578;
+  font-size: 12.5px;
+}
+
+/* ---- thinking ------------------------------------------------------------
+   Three lamps warming and cooling in turn: the same tungsten the numerals use,
+   so waiting reads as the machine drawing current rather than a web spinner. */
+
+.turn--thinking .turn-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 13px;
+}
+
+.think-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3a3c35;
+  box-shadow: inset 0 1px 1px #000;
+  animation: think-glow 1.15s ease-in-out infinite;
+}
+
+.think-dot:nth-child(2) { animation-delay: 0.16s; }
+.think-dot:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes think-glow {
+  0%, 70%, 100% { background: #3a3c35; box-shadow: inset 0 1px 1px #000; }
+  35% { background: var(--lamp); box-shadow: 0 0 8px 1px rgba(255, 180, 84, 0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .think-dot { animation: none; }
+  .think-dot:nth-child(2) { background: #6b5730; }
+}
+
+.ask-cmd {
+  background: var(--panel-deep);
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
+  overflow-x: auto;                  /* a long command scrolls, never the page */
+}
+
+.ask-cmd code {
+  color: var(--lamp);
+  font-family: var(--face-data);
+  font-size: 12.5px;
+  /* In a 340px rail a command must wrap: side-scrolling a single line to read
+     the flag you are meant to copy is worse than a wrapped line. The hanging
+     indent keeps the continuation visibly part of the same command. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  display: block;
+  padding-left: 1.4em;
+  text-indent: -1.4em;
+}
+
+
+@media (max-width: 560px) {
+  .ask-row { flex-direction: column; }
+  #ask-go { width: 100%; }
+}
+
+/* Below the two-column threshold the rail stops being a rail: the instruments
+   are the reason the page exists, so they come first and the question panel
+   follows them. Sticky is dropped — a sticky block in a single column would
+   cover the meters it is describing. */
+@media (max-width: 1080px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ask-rail {
+    order: 2;
+    /* In one column the rail is no longer a rail: it stops being viewport-tall
+       and stops sticking, because a sticky block here would cover the meters
+       it is describing. */
+    position: static !important;   /* beats the sticky !important above */
+    height: auto;
+    max-height: none;
+  }
+  /* Sized to its content instead of scrolling inside a box, but still capped so
+     a long transcript cannot make the whole page one endless column. */
+  .ask-rail .ask-out {
+    flex: 0 0 auto;
+    max-height: 60vh;
+  }
+  .instruments {
+    order: 1;
+  }
+  /* There is no seam to drag when there are no two columns to part. */
+  .splitter { display: none; }
+
+  /* With no rail there is no instrument column to align the load bay to, so
+     the wordmark drops back to its natural width and the bar closes up. */
+  .masthead-brand { width: auto; }
+}
+
+/* The fixed bar has a fixed budget: one line. As the window narrows the parts
+   that are decoration rather than control give way first — the readout, then
+   the wordmark — so the load bay, the workspace, Reset and the meter tray are
+   still all reachable at 400px without the bar wrapping into a second row and
+   eating the top of the bench. */
+@media (max-width: 900px) {
+  .masthead { gap: 10px; }
+  .masthead-meta { display: none; }
+}
+
+@media (max-width: 560px) {
+  .masthead { padding-inline: 10px; gap: 6px; }
+  .masthead-brand { display: none; }
+  .masthead-load .btn { padding-inline: 7px; }
+  /* Last resort at the very narrow end. Even stripped to glyphs the bar's
+     controls — two pickers, the workspace assembly, Reset and the meter tray —
+     eventually need more than 360px, and the alternative to scrolling is a
+     control that exists but cannot be reached. The bar scrolls SIDEWAYS on its
+     own; the page does not, because the bar is fixed and so is outside the
+     document's scroll width. Nothing here can therefore cause a horizontal
+     scrollbar on the page itself. */
+  .masthead { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .masthead::-webkit-scrollbar { display: none; }
+  /* A flex item may not shrink below its content by default, which is what
+     lets the row keep its true width inside the scroller. */
+  .masthead-controls { flex: 0 0 auto; }
+  /* The load bay is the one thing that may give up its words: two file
+     pickers side by side are the widest pair on the bar, and at this width
+     keeping them whole is what pushed Reset and the meter tray off the end.
+     They shorten rather than disappear — both keep a full title and
+     aria-label, so what they do is still discoverable. */
+  #pick-audio { font-size: 0; }
+  #pick-audio::after { content: "AUDIO"; font-size: 11px; letter-spacing: 0.1em; }
+  #pick-json { font-size: 0; }
+  #pick-json::after { content: "JSON"; font-size: 11px; letter-spacing: 0.1em; }
+  /* The selector keeps a usable but modest width; the two keys beside it are
+     already square. Measured at 400px: this is what brings the bar's full
+     width (load bay + workspace + Reset + the meter tray) inside the window
+     so nothing has to be scrolled to. */
+  .masthead .workspace-select {
+    /* `width`, not `max-width`: a <select> sizes itself to its widest option,
+       and a max-width alone was being ignored here because the element's own
+       preferred width is what the flex row was already using. */
+    width: 62px;
+    max-width: 62px;
+    min-width: 0;
+    flex: 0 0 62px;
+    padding: 5px 16px 5px 6px;
+    background-position: calc(100% - 10px) calc(50% + 1px),
+                         calc(100% - 6px)  calc(50% + 1px);
+  }
+  .masthead-controls { gap: 4px; }
+  .workspaces { gap: 4px; }
+  .workspaces .btn--icon { width: 24px; height: 24px; }
+  #reset-all { padding-inline: 7px; }
+}
+
+/* ================================================== collapsible cards ====
+   The control reads as a machined slot in the faceplate, not a web chevron.
+   ========================================================================= */
+
+/* The auto margin that pushes this to the right is NOT set here: which control
+   in a title row claims it depends on which controls the row has, and that is
+   decided in one place, in "the title row's shape with the controls in it"
+   further down the sheet. Setting it here as well gave two controls an auto
+   margin each and split the row, which wrapped the note onto a second line. */
+.collapse-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  color: #9a9c92;
+  cursor: pointer;
+  padding: 0;
+}
+
+.collapse-btn:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+.collapse-btn:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* the glyph: a bar that gains a stem when collapsed, so it reads as
+   minus / plus without loading an icon font */
+.collapse-btn::before {
+  content: "";
+  width: 11px;
+  height: 1px;
+  background: currentColor;
+  box-shadow: 0 0 0 0 currentColor;
+}
+
+.collapse-btn::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 11px;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.collapse-btn { position: relative; }
+
+.is-collapsed .collapse-btn::after { opacity: 1; }
+
+/* A folded card keeps its whole header — engraved name, note and control — and
+   loses only its pinstripe, so a stack of collapsed cards reads as a row of
+   closed drawers each still labelled with what is inside it. */
+.is-collapsed { padding-bottom: clamp(10px, 1.6vw, 14px); }
+.is-collapsed .unit-title { margin-bottom: 0; }
+.is-collapsed.unit--striped::after { opacity: 0; }
+
+/* The title row must stay legible when folded: the name never dims, and the
+   note drops to the second line rather than being clipped. */
+.is-collapsed .unit-title h2 { color: #b0b2a6; }
+
+/* A title row can carry an action button (Analysis does). It sits hard right
+   with the other controls and keeps its baseline off the h2. Which control
+   claims the auto margin is settled in one place further down the sheet. */
+.unit-title .btn { align-self: center; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ===================================================== run controls ======
+   The Run button only exists when a server is actually listening, so its
+   presence is itself the signal that a command can be executed here.
+   ========================================================================= */
+
+.ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ask-run {
+  background: linear-gradient(180deg, #2f3a2c, #1b231a);
+  border: 1px solid #47563f;
+  border-radius: 3px;
+  color: #bcd6ae;
+  font-family: var(--face-engrave);
+  font-size: 14px;
+  letter-spacing: 0.10em;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+
+.ask-run:hover { border-color: var(--ok); color: #d8efc9; }
+
+/* a command that writes audio is not the same kind of act, and must not look
+   like one */
+.ask-run--writes {
+  background: linear-gradient(180deg, #3a2b22, #241814);
+  border-color: #6b4433;
+  color: #e7b79c;
+}
+
+.ask-run--writes:hover { border-color: var(--bad); color: #ffd2bb; }
+
+.ask-run:disabled { opacity: 0.55; cursor: default; }
+
+.ask-run:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+
+/* The record of what actually ran. It sits inside a turn now, so the rail's
+   own transcript does the scrolling — a second scroller nested in the first
+   would trap the wheel and hide the newest line. */
+.ask-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A log turn is machine output, not prose: full width, no bubble tint. */
+.turn--log { max-width: 100%; align-self: stretch; }
+
+.turn--log .turn-body {
+  background: var(--panel-deep);
+  border-color: #22241e;
+}
+
+.ask-log-line {
+  margin: 0 0 6px;
+  font-family: var(--face-data);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #8f9186;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.ask-log-line.is-cmd { color: var(--lamp); }
+.ask-log-line.is-ok  { color: var(--ok); }
+.ask-log-line.is-bad { color: var(--bad); }
+
+/* the one-click action: the primary verb on the page, so it is the only
+   button wearing the lamp colour */
+.btn--go {
+  background: linear-gradient(180deg, #3d3020, #241b10);
+  border-color: var(--gold);
+  color: var(--lamp);
+}
+
+/* ============================================================ timed findings
+ * The log strip under the whole-file verdicts: one row per finding, in time
+ * order, each folding open to the longer comment. Styled as a printed strip
+ * chart rather than a list of web cards — hairline rules, engraved severity,
+ * a monospace timecode that lines up down the column.
+ * ========================================================================= */
+
+.timeline {
+  margin-top: 14px;
+  border: 1px solid #101109;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #121311 0%, #101109 100%);
+  box-shadow: inset 0 1px 0 #2a2c26;
+  overflow: hidden;
+}
+
+.timeline-empty {
+  margin: 0;
+  padding: 16px 15px;
+  font-size: 13px;
+  color: #6e7067;
+}
+
+.timeline-empty b {
+  color: #8b8d83;
+  font-weight: 500;
+}
+
+.finding {
+  border-top: 1px solid #1c1e1a;
+  border-left: 3px solid #3a3c35;
+}
+
+.finding:first-child { border-top: 0; }
+
+.finding[data-severity="ok"]   { border-left-color: var(--ok); }
+.finding[data-severity="warn"] { border-left-color: var(--warn); }
+.finding[data-severity="bad"]  { border-left-color: var(--bad); }
+
+/* the row: timecode alongside the fold control */
+.finding-row {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  padding: 9px 13px 10px;
+}
+
+/* the fold control takes the rest of the row, so the whole title line is a
+   target rather than a small caret at one end */
+.finding-open {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.finding:hover { background-color: #171814; }
+
+.finding-open:focus-visible,
+.finding-time:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* the timecode is its own control: clicking it moves the transport */
+.finding-time {
+  flex: 0 0 auto;
+  font-family: var(--face-data);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--lamp);
+  background: var(--panel-deep);
+  border: 1px solid #2c2e28;
+  border-radius: 2px;
+  padding: 1px 7px;
+  cursor: pointer;
+  text-shadow: 0 0 9px rgba(255, 180, 84, 0.3);
+}
+
+.finding-time:hover {
+  border-color: var(--gold);
+  color: #ffd79a;
+}
+
+.finding-time:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+.finding-time[data-seekable="no"] {
+  color: #7e8077;
+  cursor: default;
+  text-shadow: none;
+}
+
+.finding-mark {
+  flex: 0 0 auto;
+  width: 1em;
+  font-family: var(--face-data);
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
+  color: #7e8077;
+}
+
+.finding[data-severity="ok"]   .finding-mark { color: var(--ok); }
+.finding[data-severity="warn"] .finding-mark { color: var(--warn); }
+.finding[data-severity="bad"]  .finding-mark { color: var(--bad); }
+
+.finding-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #b4b6ab;
+}
+
+/* the fold indicator: the same milled bar/stem as the card collapse control,
+   so one gesture reads the same everywhere on the faceplate */
+.finding-caret {
+  position: relative;
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  align-self: center;
+  color: #6e7067;
+}
+
+.finding-caret::before,
+.finding-caret::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+.finding-caret::before {
+  top: 5px; left: 0;
+  width: 11px; height: 1px;
+}
+
+.finding-caret::after {
+  top: 0; left: 5px;
+  width: 1px; height: 11px;
+  transition: opacity 120ms ease;
+}
+
+.finding.is-open .finding-caret::after { opacity: 0; }
+.finding.is-open .finding-caret { color: var(--gold); }
+
+.finding-open:hover .finding-caret { color: var(--gold-lit); }
+.finding-open:hover .finding-title { color: var(--dial); }
+
+/* aligned under the severity mark, so the comment hangs off its own finding
+   rather than starting back at the panel edge */
+.finding-detail {
+  margin: 0;
+  padding: 0 13px 13px calc(13px + 4.6em + 11px);
+  font-size: 13px;
+  line-height: 1.55;
+  color: #9a9c92;
+  max-width: 72ch;
+}
+
+.finding-detail b {
+  color: var(--dial);
+  font-weight: 500;
+  font-family: var(--face-data);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.94em;
+}
+
+/* at phone width the indent would leave no room for the words */
+@media (max-width: 620px) {
+  .finding-detail { padding-left: 13px; }
+  .finding-row { flex-wrap: wrap; }
+}
+
+/* ============================================================================
+   Layout grid — panels that sit two or three across
+   ----------------------------------------------------------------------------
+   `.instruments` was a flex column, one panel per row. It is now a twelve
+   column grid, which is the only shape that expresses "two across", "three
+   across" and "full width" on one denominator: 12 divides by 2 and by 3
+   exactly, so a half is 6 and a third is 4 and no row ever ends on a
+   fractional track leaving a hairline of daylight at its right edge.
+
+   The DOM stays FLAT — every panel remains a direct child of .instruments and
+   rows are expressed purely as column spans. That is a hard requirement, not a
+   preference: meters.js reorders its panels with
+   `state.container.appendChild(section)` on every tray edit, so a panel nested
+   inside a row wrapper would be torn straight back out of it the first time
+   somebody toggled a meter. With a flat grid an appendChild is only a reorder,
+   and studio.js re-derives the spans afterwards.
+   ========================================================================= */
+
+.instruments {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-content: start;
+  gap: var(--gap);
+  min-width: 0;
+}
+
+/* The default, and what a panel falls back to if the layout pass ever misses
+   it: the full width of the bench. */
+.instruments > .unit {
+  grid-column: span 12;
+  min-width: 0;   /* a grid item defaults to min-content; canvases must shrink */
+}
+
+/* Panels in a row are all as tall as the tallest of them, which is what makes
+   a row read as one machined block rather than a ragged shelf. Nothing is
+   needed to keep their CONTENT at the top: `.unit` is a block box, so the body
+   takes its natural height (measured: a 357px body in a 782px panel) and the
+   slack stays at the bottom as plain faceplate — an underfilled rack unit,
+   which is correct for this world. An `align-self` here would be inert. */
+
+/* The three widths a panel can hold. Set by studio.js from the saved layout. */
+.instruments > .unit[data-span="12"] { grid-column: span 12; }
+.instruments > .unit[data-span="6"]  { grid-column: span 6; }
+.instruments > .unit[data-span="4"]  { grid-column: span 4; }
+
+/* A switched-off meter is display:none rather than merely `hidden`, so it
+   takes no grid cell at all. Left as `hidden` alone it would still consume a
+   track and punch a hole in the row it was sharing. */
+.instruments > .unit[hidden] { display: none; }
+
+/* ---- the drag handle ----------------------------------------------------
+   The title bar IS the handle. It takes the grab cursor and a faint milled
+   ridge at its leading edge, so the affordance is legible before the pointer
+   arrives — the same engraved vocabulary as the splitter's knurl. */
+
+.instruments > .unit > .unit-title {
+  position: relative;
+  cursor: grab;
+  /* room for the grip, which is painted into the padding rather than added as
+     an element: an extra flex child would reflow every title row. */
+  padding-left: 13px;
+  margin-left: -13px;
+  border-radius: 2px;
+  touch-action: none;   /* a pointer drag must not also scroll the page */
+}
+
+.instruments > .unit > .unit-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    var(--gold) 0px, var(--gold) 1px,
+    #0a0b09 1px, #0a0b09 3px
+  );
+  opacity: 0.38;
+  transition: opacity 120ms linear;
+  pointer-events: none;
+}
+
+.instruments > .unit > .unit-title:hover::before { opacity: 0.95; }
+
+/* A panel that opts out of dragging keeps the ordinary cursor and no grip. */
+.instruments > .unit[data-no-drag] > .unit-title { cursor: default; }
+.instruments > .unit[data-no-drag] > .unit-title::before { display: none; }
+
+/* ---- the panel in the air ----------------------------------------------- */
+
+/* Lifted off the faceplate: it keeps its place in the grid, so the row does
+   not collapse under the pointer, but reads as picked up. */
+.unit.is-dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+  outline: 1px solid var(--gold);
+  outline-offset: -1px;
+}
+
+.unit.is-dragging > .unit-title { cursor: grabbing; }
+
+body.is-panel-dragging {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* While a panel is in the air nothing else may catch the pointer — a canvas
+   or a range input under the cursor would otherwise swallow the move events
+   the drag is steered by. */
+body.is-panel-dragging .instruments > .unit > *:not(.unit-title) {
+  pointer-events: none;
+}
+
+/* ---- the drop-zone map --------------------------------------------------
+   Raised the instant a drag begins. The old design was a single thin gold
+   seam that appeared only once the pointer had already found an invisible
+   edge band — you had to know where to aim before it would tell you where to
+   aim. This shows the whole structure instead: the page dims, every row is
+   outlined, and every legal landing is a real target carrying its own words.
+
+   One fixed overlay holding absolutely-positioned children, painted from
+   measured geometry, so nothing here can disturb the grid it describes. */
+
+.drop-zones {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;   /* the drag is steered by the pointer capture */
+}
+
+/* The dim. It sits under the zones but over the panels, so the structure
+   reads as an overlay on the bench rather than as part of it. */
+body.is-zoning::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 54;
+  background: rgba(8, 9, 7, 0.52);
+  pointer-events: none;
+}
+
+/* An existing row, outlined so the thing being edited is visible. Dashed and
+   faint: it is context, not a target. */
+.drop-row-outline {
+  position: absolute;
+  border: 1px dashed rgba(168, 137, 78, 0.5);
+  border-radius: var(--rack-radius);
+  pointer-events: none;
+}
+
+/* A target. Large enough to hit without aiming — half a panel for a side
+   zone, a full-width bar for a new row. */
+.drop-zone {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  border: 1px dashed rgba(216, 184, 119, 0.55);
+  background: rgba(216, 184, 119, 0.06);
+  transition: background 90ms linear, border-color 90ms linear;
+  overflow: hidden;
+}
+
+/* The words. Engraved, like every other label on the faceplate, and always
+   present rather than appearing on hover — a target that only says what it
+   does once you are on it is the problem this replaces. */
+.drop-zone-label {
+  font-family: var(--face-engrave);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #cbb98f;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+  padding: 2px 8px;
+  text-align: center;
+  line-height: 1.2;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+/* The zone under the pointer: lit, solid, unmistakable. */
+.drop-zone.is-on {
+  border-style: solid;
+  border-color: var(--gold-lit);
+  background: rgba(216, 184, 119, 0.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(216, 184, 119, 0.5),
+    0 0 16px 2px rgba(216, 184, 119, 0.28);
+}
+
+.drop-zone.is-on .drop-zone-label {
+  opacity: 1;
+  color: var(--dial-warm);
+}
+
+/* A row already three across cannot take a fourth. The zone is still SHOWN —
+   a target that vanishes leaves you wondering whether you missed it — but in
+   the faceplate's warning red and saying so, and the drop is refused. */
+.drop-zone.is-full {
+  border-color: rgba(207, 83, 64, 0.55);
+  background: rgba(196, 41, 31, 0.07);
+}
+
+.drop-zone.is-full .drop-zone-label { color: #d98b7c; }
+
+.drop-zone.is-full.is-on {
+  border-style: solid;
+  border-color: var(--red-lit);
+  background: rgba(196, 41, 31, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 74, 53, 0.5);
+}
+
+.drop-zone.is-full.is-on .drop-zone-label { color: #ffb4a6; }
+
+/* A new-row bar is short, so its label must not wrap out of it. */
+.drop-zone--row .drop-zone-label { white-space: nowrap; }
+
+/* ---- keyboard move mode -------------------------------------------------- */
+
+/* ---- the placement control and its menu ---------------------------------
+   The macOS window-tiling analogy: a small key in every title bar that opens
+   a list of places the panel can go, each performed on one click. This is the
+   precise path — nothing here needs a drag, a steady hand or a pointer at all.
+
+   The glyph is a 2x2 pane of tiles drawn in gradients rather than an icon
+   font: it says "arrangement" in the same engraved vocabulary as the rest of
+   the faceplate. */
+
+.place-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  position: relative;
+  border-radius: 3px;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  cursor: pointer;
+  padding: 0;
+  align-self: center;
+}
+
+/* ---- the title row's shape with the controls in it ----------------------
+   `.unit-title` is a wrapping flex row: engraved name, note, then whatever
+   controls the panel has. The controls must be ONE cluster hard right, and
+   the note must keep the whole middle — otherwise the note is squeezed and
+   wraps to a second line, which is what happened when the placement key and
+   the collapse key each claimed `margin-left: auto` and split the row into
+   two competing halves.
+
+   So the auto margin is claimed exactly once, by the FIRST control in the
+   row whatever that control is, and the note is given the slack instead of
+   the controls. This is written as "any control that follows another control
+   gives up its auto margin", which holds for every combination the page
+   actually builds: note+place+collapse, note+button+place+collapse, and the
+   Transport's note+place alone. */
+.unit-title > .place-btn,
+.unit-title > .collapse-btn,
+.unit-title > .btn { margin-left: auto; }
+
+.unit-title > .btn ~ .place-btn,
+.unit-title > .btn ~ .collapse-btn,
+.unit-title > .place-btn ~ .collapse-btn,
+.unit-title > .place-btn ~ .btn,
+.unit-title > .collapse-btn ~ .place-btn { margin-left: 0; }
+
+/* The note takes the slack so the controls never push it onto its own line.
+   It may shrink to nothing before the row wraps. */
+.unit-title > .unit-note {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* In a narrow panel — two or three across — the note is longer than the space
+   left beside the engraved name, and the wrapping flex row drops the whole
+   CONTROL CLUSTER onto the second line with it, leaving the keys floating
+   under the title instead of beside it.
+
+   The fix keeps the flex row and simply lets the NOTE be the only thing that
+   wraps: it is given the full width of a new line (flex-basis 100%) below the
+   threshold, so the name and the controls stay together on the first line and
+   the note flows underneath. Ordering puts the note last in the flex order so
+   it takes the second line rather than pushing the controls onto it.
+
+   The threshold is a CONTENT width, so it is asked of the panel (a container
+   query) rather than the window: a panel three across on a wide screen is
+   narrow, and no media query would ever fire for it. */
+@container panel (max-width: 560px) {
+  .unit-title > .unit-note {
+    order: 9;             /* after the controls, so it lands on line two */
+    flex: 1 0 100%;
+    margin-top: 1px;
+  }
+  /* With the note pushed to its own line the first line is name + controls,
+     and the first control takes the auto margin that pins them right. */
+  .unit-title > .btn,
+  .unit-title > .place-btn,
+  .unit-title > .collapse-btn { order: 5; }
+
+  /* ...except in a row with no visible heading (the Transport's), where the
+     note is the first line and moving it down would strand the controls over
+     empty faceplate. Repeated inside the query because it has to beat the
+     rule immediately above it at the same specificity. */
+  .unit-title--slim > .unit-note {
+    order: 0;
+    flex: 1 1 auto;
+    margin-top: 0;
+  }
+}
+
+.place-btn::before,
+.place-btn::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+  color: #9a9c92;
+}
+
+/* two tiles across the top, one wide tile beneath — a layout, in miniature */
+.place-btn::before {
+  left: 7px;
+  top: 7px;
+  width: 12px;
+  height: 5px;
+  box-shadow: 0 7px 0 0 currentColor;
+  background:
+    linear-gradient(90deg, currentColor 0 5px, transparent 5px 7px,
+                           currentColor 7px 12px);
+}
+
+.place-btn::after { display: none; }
+
+.place-btn:hover { border-color: var(--gold); color: var(--gold-lit); }
+
+.place-btn[aria-expanded="true"] {
+  border-color: var(--gold-lit);
+  color: var(--gold-lit);
+  background: linear-gradient(180deg, #2a2a22, #16170f);
+}
+
+.place-btn:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* The menu itself: a small machined card, positioned in viewport coordinates
+   by script so it can never be clipped by the panel's `overflow: hidden`. */
+.place-menu {
+  position: fixed;
+  z-index: 70;          /* above the drop-zone overlay and the masthead */
+  min-width: 212px;
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, #24251f 0%, #17180f 100%);
+  box-shadow:
+    inset 0 1px 0 #43453e,
+    0 18px 40px -12px #000,
+    0 2px 0 #000;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.place-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--dial);
+  font-family: var(--face-text);
+  font-size: 13px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.place-item:hover:not([disabled]),
+.place-item:focus-visible {
+  background: rgba(216, 184, 119, 0.16);
+  color: var(--dial-warm);
+  outline: none;
+}
+
+.place-item:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--gold-lit);
+}
+
+/* An option that would do nothing is shown with the reason rather than hidden,
+   so the menu keeps the same shape wherever the panel happens to be and the
+   answer to "why can't I?" is on screen. */
+.place-item[disabled] {
+  cursor: default;
+  color: #63655c;
+}
+
+.place-why {
+  flex: 0 0 auto;
+  font-family: var(--face-data);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #55574f;
+  white-space: nowrap;
+}
+
+.place-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: linear-gradient(90deg,
+    transparent 0%, var(--hairline) 20%, var(--hairline) 80%, transparent 100%);
+}
+
+/* A panel being moved from the keyboard is lit the way the dragged one is but
+   stays fully opaque: it is not in the air, it is being stepped. */
+.unit.is-moving {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: -2px;
+}
+
+.unit.is-moving > .unit-title h2 { color: var(--gold-lit); }
+
+/* The live region that narrates a keyboard move. Visually hidden; it exists
+   entirely for the screen reader. */
+.layout-live {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ---- responsive ---------------------------------------------------------
+   Below the two-column threshold the bench is one panel per row whatever the
+   saved layout says. The span attributes are left untouched — the layout is
+   still the user's and comes back at full width — they are simply overridden
+   here, so widening the window restores the arrangement with no reload. */
+
+@media (max-width: 1100px) {
+  .instruments > .unit,
+  .instruments > .unit[data-span="12"],
+  .instruments > .unit[data-span="6"],
+  .instruments > .unit[data-span="4"] {
+    grid-column: span 12;
+  }
+}
+
+/* At phone width the grip would crowd an already tight title row. */
+@media (max-width: 620px) {
+  .instruments > .unit > .unit-title {
+    padding-left: 0;
+    margin-left: 0;
+  }
+  .instruments > .unit > .unit-title::before { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop-zone,
+  .instruments > .unit > .unit-title::before { transition: none; }
+}
+
+/* ============================================================================
+   Panels that respond to their own width, not the window's
+   ----------------------------------------------------------------------------
+   Everything inside a panel used to stack on a @media breakpoint, which was
+   sound while a panel was always the full width of the bench: panel width and
+   viewport width moved together. Rows broke that. A panel three across on a
+   1600px screen is about 334px wide, and no viewport media query will ever
+   fire for it — so `.digital` kept its three columns inside 290px of content,
+   crushed the loudness block to 78px against the 182px its own grid asks for,
+   and .unit's `overflow: hidden` quietly clipped the readout.
+
+   The panel is therefore an inline-size container and the internal breakpoints
+   below are asked of IT. The original @media rules are left exactly as they
+   are: they still do the right thing when the whole window is narrow, and
+   these simply catch the case a media query cannot see. Every threshold is a
+   content width — the width a container query reports — not a panel width.
+   ========================================================================= */
+
+.instruments > .unit {
+  container-type: inline-size;
+  container-name: panel;
+}
+
+/* The meter bridge.
+   --------------------------------------------------------------------------
+   The threshold here is 700px of CONTENT width, and it is measured rather than
+   guessed. The bridge is `1fr auto 1fr` — dial, lamp stack, dial — with the
+   lamp column a fixed ~58px and a gap either side, so each dial gets a little
+   under half of what is left. The numbers, taken from the real page:
+
+       panel full width   1001px content ->  dial 431px   reads properly
+       panel two across    468px content ->  dial 165px   far too small
+       panel three across  290px content ->  dial 276px   stacked, correct
+
+   A dial carries seven engraved scale numbers (-20 -10 -7 -5 -3 0 +3) plus
+   LEFT/RIGHT and VU. Below about 320px across those stop being readable, and
+   at 165px they are decoration. 700px of content is the width at which two
+   side-by-side dials still clear 320px each; under it the pair stacks and each
+   dial takes the full panel width instead, which at two across is 468px — far
+   better than the 165px it was getting.
+
+   An earlier version of this rule used 460px, which sat just BELOW the 468px a
+   two-across panel actually has, so it never fired for the exact case it was
+   written for and the dials stayed in three columns over 316px of empty panel.
+   That is why the threshold is now derived from the dial's own legibility
+   floor and not from a round number that looked about right. */
+@container panel (max-width: 700px) {
+  .bridge {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  /* The lamp stack goes between the two dials, as it does on a narrow screen:
+     a peak lamp above both dials reads as belonging to neither. */
+  .bridge-centre {
+    flex-direction: row;
+    justify-content: center;
+    gap: 14px;
+    order: 2;
+  }
+  .vu:first-child { order: 1; }
+  .vu:last-child  { order: 3; }
+}
+
+/* Levels & Loudness: three columns, then two with correlation spanning the
+   full width, then one. These are the widths at which each arrangement stops
+   fitting, measured rather than guessed. */
+@container panel (max-width: 620px) {
+  .digital { grid-template-columns: 1fr 1fr; }
+  .corr { grid-column: 1 / -1; }
+}
+
+@container panel (max-width: 380px) {
+  .digital { grid-template-columns: 1fr; }
+}
+
+/* The loudness cells are what actually overflowed: two 91px tracks plus their
+   gap need more room than a third of a narrow panel ever has. */
+@container panel (max-width: 300px) {
+  .lufs-grid { grid-template-columns: 1fr; }
+}
+
+/* Nothing is added here for the goniometer or the transport readouts. Both
+   already size themselves from their own content — `.gonio` is a wrapping flex
+   row whose side column is `flex: 1 1 200px`, and `.readouts` is an auto-fit
+   grid of `minmax(104px, 1fr)` tracks — so they reflow in a narrow panel with
+   no help, and a breakpoint here would only override a rule that is already
+   doing the right thing. Verified at 334px rather than assumed. */
+
+/* ============================================================================
+   Workspaces — the bench preset selector
+   ----------------------------------------------------------------------------
+   A named arrangement of the whole bench. It reads as one machined assembly on
+   the masthead rail: an engraved label, a recessed selector, and two small
+   keys — the same pushbutton as .btn, at the size the masthead's other
+   controls already use.
+   ========================================================================= */
+
+.workspaces {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.workspaces-label {
+  font-family: var(--face-engrave);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: #86887e;
+  text-transform: uppercase;
+  text-shadow: 0 -1px 0 #0c0d0b, 0 1px 0 #4e5049;
+  white-space: nowrap;
+}
+
+/* The selector: a recessed well with the dial's own lettering, not a browser
+   select in a dark page. `appearance: none` strips the platform control; the
+   caret is drawn as two gold strokes so it matches the pinstripes. */
+.workspace-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--face-data);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--dial);
+  background-color: #101109;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--gold) 50%),
+    linear-gradient(135deg, var(--gold) 50%, transparent 50%);
+  background-position:
+    calc(100% - 13px) calc(50% + 1px),
+    calc(100% - 8px)  calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  border: 1px solid #2c2e28;
+  border-radius: 3px;
+  padding: 6px 26px 6px 9px;
+  max-width: 190px;
+  cursor: pointer;
+  box-shadow: inset 0 2px 5px #000, 0 1px 0 #40423b;
+}
+
+.workspace-select:hover { border-color: var(--gold); }
+
+.workspace-select:focus-visible {
+  outline: 2px solid var(--gold-lit);
+  outline-offset: 2px;
+}
+
+/* The options are painted by the platform, so they get explicit colours
+   rather than inheriting a transparent ground. */
+.workspace-select option {
+  background: #16170f;
+  color: var(--dial);
+}
+
+.workspace-select optgroup {
+  background: #16170f;
+  color: #86887e;
+  font-family: var(--face-text);
+  font-style: normal;
+}
+
+/* The two keys beside it. Square, glyph-only, sized to the selector's height
+   so the assembly reads as one machined block. */
+.workspaces .btn--icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--face-data);
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.workspaces .btn--icon[disabled] { opacity: 0.3; }
+
+/* Delete is the destructive one: it stays neutral at rest and only shows its
+   colour on approach, so it never reads as a warning the bench is issuing. */
+.workspaces .btn--danger:hover:not([disabled]) { color: var(--red-lit); }
+
+@media (max-width: 860px) {
+  .workspaces-label { display: none; }
+  .workspace-select { max-width: 130px; }
+}
+

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+player/scope.html
+
+# The pre-split backup of meters.js. It existed because this tree was
+# untracked and two subagents had already deleted work here; git history is
+# the better version of that guarantee, so it does not travel into the repo.
+studio/.attic/

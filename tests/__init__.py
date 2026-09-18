@@ -1,10 +1,7 @@
-"""Test package for the song-shop tooling.
+"""Tests for music_studio.
 
-Puts the parent directory on sys.path so `import analyze` resolves when tests
-are run with `python -m unittest discover -s tests` from the repo root.
+`music_studio` is an installed package (`pip install -e .`), so these import
+it the way any consumer would. There is no sys.path insertion here: that was
+needed when the modules sat loose in one directory, and keeping it would mean
+the tests could pass against a copy the rest of the world cannot import.
 """
-
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

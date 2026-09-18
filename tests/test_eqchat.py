@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import unittest
 
-import eqchat
+from music_studio.insight import eqchat
 
 
 class TestValidator(unittest.TestCase):
@@ -144,7 +144,7 @@ class TestContext(unittest.TestCase):
 class TestErrors(unittest.TestCase):
     def test_missing_key_is_readable(self):
         original = eqchat.__dict__.get("_load_env_key")
-        import advise
+        from music_studio.insight import advise
         saved = advise._load_env_key
         advise._load_env_key = lambda: None
         try:

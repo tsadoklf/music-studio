@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import unittest
 
-import mcp_server
-from serve import COMMANDS
+from music_studio.serve import mcp as mcp_server
+from music_studio.serve.http import COMMANDS
 
 
 class TestToolList(unittest.TestCase):

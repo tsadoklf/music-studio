@@ -27,7 +27,6 @@ import logging
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 log = logging.getLogger("studio")
 
@@ -48,9 +47,9 @@ def main(argv: list[str] | None = None) -> int:
         format="%(levelname)s: %(message)s",
     )
 
-    from analyze import AnalyzeError, analyze
-    from report import headline, verdicts, write_reports
-    from timeline import build as build_timeline
+    from music_studio.audio.analyze import AnalyzeError, analyze
+    from music_studio.insight.report import headline, verdicts, write_reports
+    from music_studio.insight.timeline import build as build_timeline
 
     try:
         if not args.src.is_file():
@@ -66,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
 
         advice = None
         if not args.no_advice:
-            from advise import DEFAULT_MODEL, AdviseError, advise
+            from music_studio.insight.advise import DEFAULT_MODEL, AdviseError, advise
             try:
                 log.info("Asking for advice")
                 advice = advise(data, None, DEFAULT_MODEL)

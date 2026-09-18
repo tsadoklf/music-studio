@@ -579,7 +579,7 @@ def detect_cutoff(freqs, magnitude_db, rate: int) -> Cutoff:
 def band_energy(data, rate: int) -> dict:
     """The seven-band table, using compare.py's bands so the two tools agree."""
     import numpy as np
-    from compare import BANDS
+    from music_studio.audio.compare import BANDS
 
     freqs, magnitude_db = average_spectrum(data, rate)
     power = 10.0 ** (magnitude_db / 10.0)
@@ -794,7 +794,7 @@ def _musical(path: Path) -> dict:
     the part everything else depends on.
     """
     try:
-        from tempo import analyse as _analyse_musical
+        from music_studio.audio.tempo import analyse as _analyse_musical
         return _analyse_musical(path)
     except Exception as exc:                      # noqa: BLE001
         log.debug("no tempo/key estimate: %s", exc)
@@ -809,7 +809,7 @@ def _delivery_targets() -> dict:
     than none at all.
     """
     try:
-        from master import DEFAULT_LUFS, DEFAULT_TP
+        from music_studio.audio.master import DEFAULT_LUFS, DEFAULT_TP
         lufs, tp, source = DEFAULT_LUFS, DEFAULT_TP, "master.py"
     except ImportError:
         lufs, tp, source = -14.0, -1.0, "fallback"
@@ -863,7 +863,7 @@ def analyze(path: Path, *, spectrogram_bins: int = SPECTROGRAM_BINS,
     ffmpeg_ok = False
     if use_ffmpeg:
         try:
-            from master import MasterError, measure
+            from music_studio.audio.master import MasterError, measure
 
             loudness = measure(path)
             measures.update({
@@ -996,7 +996,7 @@ def analyze(path: Path, *, spectrogram_bins: int = SPECTROGRAM_BINS,
     # otherwise showed "No analysis yet" beside fully populated verdict cards.
     # Derived from the series already in `report`, so this costs no extra I/O.
     try:
-        from timeline import find_events
+        from music_studio.insight.timeline import find_events
         report["timeline"] = find_events(report)
     except Exception as exc:                          # noqa: BLE001
         log.debug("no timeline: %s", exc)

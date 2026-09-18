@@ -15,8 +15,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-import advise
-import master
+from music_studio.insight import advise
+from music_studio.audio import master
 
 
 def _analysis(**over) -> dict:
@@ -94,7 +94,7 @@ class TestTargetsContract(unittest.TestCase):
     """analyze.py must publish master.py's real numbers, not a second copy."""
 
     def test_targets_come_from_master(self):
-        import analyze
+        from music_studio.audio import analyze
         t = analyze._delivery_targets()
         self.assertEqual(t["integrated_lufs"], master.DEFAULT_LUFS)
         self.assertEqual(t["true_peak_dbtp"], master.DEFAULT_TP)
@@ -102,7 +102,7 @@ class TestTargetsContract(unittest.TestCase):
 
     def test_targets_track_a_changed_default(self):
         """Change master.py's default and the analysis must follow it."""
-        import analyze
+        from music_studio.audio import analyze
         original = master.DEFAULT_LUFS
         try:
             master.DEFAULT_LUFS = -16.0
@@ -150,10 +150,16 @@ class TestKeyLookup(unittest.TestCase):
             else:
                 os.environ[k] = v
 
-    def test_env_file_lives_inside_this_repo(self):
-        """The regression itself: no path may climb out of the package."""
-        here = Path(advise.__file__).resolve().parent
-        self.assertEqual(advise.env_path().parent, here)
+    def test_env_file_lives_inside_the_project(self):
+        """The regression itself: no path may climb out of the project.
+
+        The .env is the USER's configuration, so it sits at the project root
+        beside pyproject.toml — not inside the package, and certainly not in
+        a sibling checkout, which is what broke it the first time. See
+        paths.project_root() for why those are different questions.
+        """
+        from music_studio import paths
+        self.assertEqual(advise.env_path().parent, paths.project_root())
 
     def test_env_file_is_dot_env(self):
         self.assertEqual(advise.env_path().name, ".env")

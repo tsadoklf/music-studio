@@ -35,14 +35,13 @@ from typing import Optional
 import typer
 
 # the four workers live beside this file
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import paths  # noqa: E402  (after the path insert above)
+from music_studio import paths  # noqa: E402  (after the path insert above)
 
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
-    help="Song-shop pipeline: scaffold, master, compare, render, publish.",
+    help="Mastering bench: scaffold, measure, master, compare, render, publish.",
 )
 
 log = logging.getLogger("music")
@@ -176,7 +175,7 @@ def measure(
     audio: Path = typer.Argument(..., help="Audio file."),
 ) -> None:
     """Report integrated loudness, true peak and loudness range."""
-    from master import MasterError, measure as _measure
+    from music_studio.audio.master import MasterError, measure as _measure
 
     try:
         typer.echo(_measure(audio).describe())
@@ -202,8 +201,8 @@ def studio(
     """
     import webbrowser
 
-    from analyze import AnalyzeError, analyze as _analyze
-    from report import write_reports
+    from music_studio.audio.analyze import AnalyzeError, analyze as _analyze
+    from music_studio.insight.report import write_reports
 
     _setup_logging(verbose)
 
@@ -229,7 +228,7 @@ def studio(
 
     advice = None
     if not no_advice:
-        from advise import DEFAULT_MODEL, AdviseError, advise as _advise
+        from music_studio.insight.advise import DEFAULT_MODEL, AdviseError, advise as _advise
         try:
             advice = _advise(report_data, None, DEFAULT_MODEL)
         except AdviseError as exc:
@@ -238,7 +237,7 @@ def studio(
     written = write_reports(report_data, dest, advice)
 
     # The verdict, in the terminal, without opening anything.
-    from report import headline, verdicts as _verdicts
+    from music_studio.insight.report import headline, verdicts as _verdicts
     vs = _verdicts(report_data)
     typer.echo("")
     typer.secho(f"  {headline(vs)}", bold=True,
@@ -256,7 +255,7 @@ def studio(
     _ok(f"  {written['ai']}")
 
     if serve_it:
-        from serve import ServeError, serve as _serve
+        from music_studio.serve.http import ServeError, serve as _serve
         try:
             _serve(dest.resolve(), port, False)
         except ServeError as exc:
@@ -287,7 +286,7 @@ def maximize(
     `music master`, which applies the true-peak ceiling — the limiter here
     cannot, and must never be the last word.
     """
-    import maximize as mx
+    from music_studio.audio import maximize as mx
 
     _setup_logging(verbose)
     if list_presets:
@@ -332,7 +331,7 @@ def serve(
     Loopback only, and anything that writes audio shows you the exact command
     and waits for a click first. Stop it with Ctrl-C; nothing is left running.
     """
-    from serve import ServeError, serve as _serve
+    from music_studio.serve.http import ServeError, serve as _serve
 
     _setup_logging(verbose)
     try:
@@ -353,7 +352,7 @@ def advise(
     It reads an analysis, never the audio, and it recommends commands rather
     than running them.
     """
-    from advise import DEFAULT_MODEL, AdviseError, advise as _advise
+    from music_studio.insight.advise import DEFAULT_MODEL, AdviseError, advise as _advise
 
     _setup_logging(verbose)
 
@@ -430,7 +429,7 @@ def scope(
     """
     import webbrowser
 
-    from analyze import AnalyzeError, analyze as _analyze
+    from music_studio.audio.analyze import AnalyzeError, analyze as _analyze
 
     _setup_logging(verbose)
 
@@ -473,7 +472,7 @@ def scope(
 
     advice = None
     if with_advice:
-        from advise import DEFAULT_MODEL, AdviseError, advise as _advise
+        from music_studio.insight.advise import DEFAULT_MODEL, AdviseError, advise as _advise
         try:
             advice = _advise(report, None, DEFAULT_MODEL)
         except AdviseError as exc:
@@ -509,7 +508,7 @@ def master(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Master a take to masters/master.wav."""
-    from master import MasterError, master_loudnorm, master_reference
+    from music_studio.audio.master import MasterError, master_loudnorm, master_reference
 
     _setup_logging(verbose)
     tdir = _track_dir(track)
@@ -541,7 +540,7 @@ def compare(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Compare two versions numerically, and write a null test you can hear."""
-    from compare import CompareError, compare as _compare
+    from music_studio.audio.compare import CompareError, compare as _compare
 
     _setup_logging(verbose)
     if a and b:
@@ -570,7 +569,7 @@ def video(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Render the YouTube video and thumbnail from the master and artwork."""
-    from trackvideo import TrackVideoError, build
+    from music_studio.audio.trackvideo import TrackVideoError, build
 
     _setup_logging(verbose)
     tdir = _track_dir(track)
@@ -670,5 +669,15 @@ def doctor() -> None:
     _ok("All present.")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """The `music` console script.
+
+    A named function rather than pointing the entry point straight at `app`:
+    setuptools needs something callable with no arguments, and a wrapper is
+    also where anything that must happen before Typer takes over would go.
+    """
     app()
+
+
+if __name__ == "__main__":
+    main()

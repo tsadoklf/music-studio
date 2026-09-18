@@ -46,7 +46,7 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import paths
+from music_studio import paths
 
 log = logging.getLogger("serve")
 

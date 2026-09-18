@@ -25,8 +25,8 @@ import soundfile as sf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import analyze
-from analyze import (
+from music_studio.audio import analyze
+from music_studio.audio.analyze import (
     AnalyzeError,
     average_spectrum,
     channel_envelopes,
@@ -589,7 +589,7 @@ class TestCli(unittest.TestCase):
         """Nothing but JSON may reach stdout, or `analyze.py | jq` breaks."""
         with TempWav(sine(1000.0, 3.0, -20.0)) as path:
             proc = subprocess.run(
-                [sys.executable, str(Path(__file__).resolve().parent.parent / "analyze.py"),
+                [sys.executable, "-m", "music_studio.audio.analyze",
                  "--in", str(path), "--no-ffmpeg",
                  "--spectrogram-frames", "40", "--spectrogram-bins", "32"],
                 capture_output=True, text=True,
@@ -613,7 +613,7 @@ class TestAgainstFfmpeg(unittest.TestCase):
             self.skipTest("ffmpeg not on PATH")
 
     def test_internal_loudness_matches_ffmpeg(self):
-        from master import measure
+        from music_studio.audio.master import measure
 
         for level in (-20.0, -14.0):
             with self.subTest(level=level):
@@ -624,7 +624,7 @@ class TestAgainstFfmpeg(unittest.TestCase):
                 self.assertAlmostEqual(mine, theirs, delta=0.3)
 
     def test_internal_loudness_matches_ffmpeg_on_noise(self):
-        from master import measure
+        from music_studio.audio.master import measure
 
         rng = np.random.default_rng(17)
         noise = rng.normal(0.0, 0.05, (RATE * 12, 2))

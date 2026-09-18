@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "music-studio"
+version = "1.0.0"
+description = "A mastering bench: measure audio, master it, and see what you are doing."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+# Python 3.12 is the floor, not a preference. These modules annotate with
+# `X | None`, which older versions reach only through
+# `from __future__ import annotations`; 3.12 is where the syntax is native and
+# where this is tested.
+
+dependencies = [
+  "soundfile>=0.12",
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+# Reference mastering. Large, and only `master --reference` needs it.
+reference = ["matchering>=2.0"]
+# YouTube publishing. The module it would serve does not exist yet; the extra
+# is declared so the dependency is recorded in one place when it does.
+publish = ["google-api-python-client>=2.0", "google-auth-oauthlib>=1.0"]
+
+[project.scripts]
+music = "music_studio.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# The browser bench travels with the package. It is data, not code: no Python
+# imports it, it must keep opening from file:// with no build step, and
+# paths.web_dir() is what finds it at run time.
+[tool.setuptools.package-data]
+"music_studio" = ["web/*.html", "web/*.css", "web/*.js", "web/widgets/*.js",
+                  "web/widgets/*.md", "web/widgets/mockups/*.html"]
+
+[tool.setuptools]
+include-package-data = true

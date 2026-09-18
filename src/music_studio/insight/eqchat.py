@@ -34,7 +34,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 log = logging.getLogger("eqchat")
 
@@ -200,7 +199,7 @@ def _context(bands, analysis) -> str:
 
 def interpret(ask: str, bands=None, analysis=None, model: str | None = None,
               api_key: str | None = None) -> dict:
-    from advise import DEFAULT_MODEL, _load_env_key
+    from music_studio.insight.advise import DEFAULT_MODEL, _load_env_key
 
     key = api_key or _load_env_key()
     if not key:

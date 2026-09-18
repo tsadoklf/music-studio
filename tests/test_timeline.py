@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import unittest
 
-import timeline
+from music_studio.insight import timeline
 
 
 def series(values, step=0.5):

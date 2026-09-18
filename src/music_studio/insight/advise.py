@@ -32,7 +32,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-import paths
+from music_studio import paths
 
 log = logging.getLogger("advise")
 

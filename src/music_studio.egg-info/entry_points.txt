@@ -1,0 +1,2 @@
+[console_scripts]
+music = music_studio.cli:main

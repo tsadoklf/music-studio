@@ -1,7 +1,12 @@
 # Componentization plan
 
-**Status:** proposed, 2026-09-18. Nothing here is executed yet.
-Written after the extraction from `atlas-city-press` (#19, #20).
+**Status:** in progress, 2026-09-18. Phases 0 and 1 are done.
+
+> **This document is temporary and refers to history the code no longer does.**
+> It is the only place in this repository that mentions where this code came
+> from, because a plan has to explain why its phases exist. Everything else
+> reads as a standalone project. Delete this file once the last phase lands —
+> the status table below says when that is.
 
 This is a plan with a live status table at the bottom. Update it in the same
 change that does the work, so the plan never describes a repo that no longer
@@ -150,7 +155,19 @@ just broke. Add `.env` to `.gitignore` and document it in the README.
 
 This phase is independent of everything else and should ship on its own.
 
-### Phase 1 — asset paths stop being `__file__` arithmetic
+### Phase 1 — asset paths stop being `__file__` arithmetic — **DONE**
+
+Shipped in #3. `paths.py` answers five questions — the web directory, the
+page, the song template, a sibling script, the `.env` — each with an
+environment override. `song-template.md` is still not installed, so
+`song_template()` returns `None` and `music new` degrades to a stub with a
+warning; that is now an explicit contract rather than a path that happens not
+to exist.
+
+The original description follows, for the record.
+
+---
+
 
 Four places compute a path from their own location:
 
@@ -259,7 +276,7 @@ tests and visible only on screen.
 | Phase | What | State |
 |---|---|---|
 | 0 | API key lookup no longer walks into a sibling repo | **done** (#2) |
-| 1 | `paths.py`; `song-template.md` settled | not started |
+| 1 | `paths.py`; `song-template.md` settled | **done** (#3) |
 | 2 | `src/` layout, `pyproject.toml`, `music` entry point | not started |
 | 3 | thin `cli.py` | not started |
 | 4 | shared constants; `audio/` stops importing `insight/` | not started |

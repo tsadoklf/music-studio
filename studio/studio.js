@@ -1823,7 +1823,7 @@ class Engine {
    ========================================================================== */
 
 /* Delivery targets. These are defaults for the audio-only path, where nothing
- * tells us what the shop aims for. An analyze.py JSON carries a `targets` block
+ * tells us what the delivery target is. An analyze.py JSON carries a `targets` block
  * read from master.py, and loading one overwrites these — so changing
  * DEFAULT_LUFS in master.py reaches this page instead of leaving it quietly
  * showing a number nobody targets any more. */
@@ -2845,7 +2845,7 @@ window.addEventListener('drop', (e) => {
 
 /* ---- boot --------------------------------------------------------------
    The page opens showing a worked example: a short synthesised passage at
-   the shop's own target so every instrument reads a real value on load,
+   the delivery target so every instrument reads a real value on load,
    plainly marked as a demo tone rather than passed off as the user's file. */
 
 function demoAnalysis() {

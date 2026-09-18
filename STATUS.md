@@ -29,12 +29,11 @@ The page is optional. The CLI is not.
 ## Run it
 
 ```sh
-cd _tooling
 python3.12 -m venv .venv && ./.venv/bin/pip install -r requirements.txt   # first time
 ./.venv/bin/python music.py studio <file.wav>          # measure + report, one step
-./.venv/bin/python music.py serve ../camille-marceau   # the page, on 127.0.0.1:8770
+./.venv/bin/python music.py serve <audio-dir>          # the page, on 127.0.0.1:8770
 ./.venv/bin/python music.py maximize <file> --preset loud   # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 235 tests
+./.venv/bin/python -m unittest discover -s tests -t .  # 242 tests
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -58,6 +57,7 @@ then, which it says on screen.
 | `eqchat.py` | Plain language → equaliser bands. Returns data, never commands. |
 | `compare.py` | Null test: hear exactly what processing changed. |
 | `studio_run.py` | Analyse + report + advise in one call. What the page's button runs. |
+| `paths.py` | Where the page, the template, the .env and the scripts are. Asked once, never recomputed. |
 | `serve.py` | Loopback HTTP server. What turns a click in the page into a process. |
 | `mcp_server.py` | The same commands as MCP tools, for an agent. Generated from serve.py's table. |
 | `studio/widgets/maximizer.js` | The suite's panel: live preview, GR meters, and the command that renders it. |
@@ -87,8 +87,8 @@ Register it with:
 
 ```json
 { "mcpServers": { "music-studio": {
-    "command": "/path/to/_tooling/.venv/bin/python",
-    "args": ["/path/to/_tooling/mcp_server.py", "--root", "/path/to/camille-marceau"] } } }
+    "command": "/path/to/music-studio/.venv/bin/python",
+    "args": ["/path/to/music-studio/mcp_server.py", "--root", "/path/to/audio"] } } }
 ```
 
 `--read-only` refuses every tool that writes audio. `master` additionally
@@ -115,7 +115,7 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 235 tests total, all passing.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 242 tests total, all passing.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -159,8 +159,9 @@ taken from the live page, which is weaker than a test but stronger than a claim:
 - **`music check` and `music publish` raise `ModuleNotFoundError`.**
   `ytpublish.py` does not exist. The pipeline can measure, master, report and
   render video — it **cannot publish**. This is the largest hole.
-- **`song-template.md` is in the wrong place.** `music new` looks for it in
-  `_tooling/`; it lives one directory up. `new` degrades to a stub and warns.
+- **`song-template.md` is not installed.** `music new` asks `paths.song_template()`
+  for it and gets `None`, so it degrades to a stub and warns. Either vendor the
+  file or drop the command's dependency on it.
 
 ### Not verified by anyone
 
@@ -285,7 +286,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from `_tooling/`. 235, all passing. Keep it that way.
+  from the repo root. 242, all passing. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on
@@ -294,7 +295,8 @@ it straight to WebAudio.
   lit-pixel counts cannot tell "correct" from "tiny but non-blank".
 - **The CLI is the authority.** If the page and the CLI disagree, the page is
   wrong.
-- **Nothing here is in git yet.** `music-works/` is untracked. Two subagents
-  have already deleted untracked work in this directory; one backup lives at
-  `studio/.attic/`. Committing this is the single highest-value housekeeping
-  task outstanding.
+- **Asset paths come from `paths.py`.** The browser page, the song template,
+  the `.env` and the scripts `serve.py` runs as subprocesses are all asked for
+  there, with an environment override apiece. Do not write `Path(__file__)` to
+  find an asset: five call sites each carried that assumption, and every one of
+  them breaks when a module moves.

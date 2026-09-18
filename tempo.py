@@ -22,7 +22,7 @@ Neither is a transcription. A tempo of 128 BPM on a track in 4/4 is worth
 believing; a key on a drone or a heavily modal piece is worth a second look, and
 the confidence figure is there to say so.
 
-Requires numpy, scipy and soundfile — the same set the rest of the shop uses.
+Requires numpy, scipy and soundfile.
 """
 
 from __future__ import annotations

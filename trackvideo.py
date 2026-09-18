@@ -11,7 +11,7 @@ Usage:
 
 Requires ffmpeg and ffprobe on PATH.
 
-music-works/<artist-name>/_artwork/
+<artist-name>/_artwork/
    <artist-name>-frame-1080p.png — the video frame. Feed it to trackvideo.py as --art with no --pad-colour; it's already 16:9.
    <artist-name>-thumb-720.jpg — the thumbnail, 247 KB, well under the 2 MB cap.
    <artist-name>-cover-3000.png — the square master for streaming distribution. It's 21 MB as PNG, so convert to JPEG before uploading to a distributor; most want JPEG under 10 MB.

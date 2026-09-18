@@ -3,10 +3,10 @@
 A mastering bench for a small music imprint: a Python CLI that measures and
 masters audio, and a browser control surface for it.
 
-Extracted from `atlas-city-press/music-works/_tooling` on 2026-09-18, with
-history. The **audio and artist folders deliberately did not come with it** —
-they stay in `atlas-city-press`, where the imprint's other binaries live. This
-repo is code, and stays small enough to clone in a second.
+This repository is code only. Audio, artwork and video stay wherever you keep
+them and are reached through `--root` and the file arguments — nothing here
+hardcodes a path to your music, so one checkout serves any number of projects
+and stays small enough to clone in a second.
 
 ## Start here
 
@@ -48,11 +48,15 @@ file if it lives somewhere else.
 ### Pointing it at the music
 
 Nothing here hardcodes a path to the audio; `--root` and the file arguments
-are how it finds anything. From a sibling checkout of `atlas-city-press`:
+are how it finds anything:
 
 ```sh
-./.venv/bin/python music.py serve ../atlas-city-press/music-works/camille-marceau
+./.venv/bin/python music.py serve /path/to/your/audio
+./.venv/bin/python music.py scope "/path/to/your/audio/<artist>/tracks/<slug>/masters/<take>.wav"
 ```
+
+`--root` is a containment boundary as well as a convenience: the server will
+not read or write outside it, and a path argument that escapes is refused.
 
 ## What is in it
 

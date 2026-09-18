@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for serve.py.
 
-This is the one file in the shop that turns a browser click into a process, so
+This is the one file that turns a browser click into a process, so
 the tests are mostly about what it refuses. Each case below corresponds to a way
 the page could otherwise reach something it should not: a path outside the root,
 a flag the command table does not list, a write without a confirmation, a

@@ -5,7 +5,7 @@ description: Produce and publish music tracks for Tsadok's channels (Le Bal Muse
 
 # Song shop
 
-> **Working on the tooling itself?** Read `_tooling/STATUS.md` first — it is the
+> **Working on the tooling itself?** Read `STATUS.md` first — it is the
 > whole-system view: what exists, what is proven, what is known-broken, and the
 > invariants that will bite you. This file covers the song workflow; that one
 > covers the machine.
@@ -23,15 +23,16 @@ job is everything mechanical.** Never do by hand what `music` does.
 ## Layout
 
 ```
-song-shop/
-  _tooling/          music.py and the four workers, song-template.md
-  camille-marceau/   orchestral chanson, foreground, sung
+<audio-root>/                 whatever you point --root at
+  <artist>/
     tracks/<slug>/
       song.md
       masters/master.wav, masters/takes/take-NN.wav
       artwork/, video/
-  le-bal-musette/    instrumental café musette, background, volumes
 ```
+
+The tooling does not care what the artists are called or how many there are;
+`--root` and the file arguments are the whole interface to the audio.
 
 Slugs are kebab-case. Display titles with accents and feat. credits live inside
 `song.md`, never in paths.
@@ -234,8 +235,8 @@ commands for you to paste. `scope --advise --open` puts an answer straight on th
 any `music …` line in an answer grows a Run button.
 
 ```
-music serve ../camille-marceau          # http://127.0.0.1:8770
-music serve ../camille-marceau --read-only
+music serve <audio-dir>                 # http://127.0.0.1:8770
+music serve <audio-dir> --read-only
 ```
 
 Four rules hold it in place, and each is tested:

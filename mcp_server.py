@@ -32,7 +32,7 @@ there exposes it here automatically, and the safety rules — argv only, never a
 shell string; every path resolved inside --root; `master` marked as writing —
 are the same code, not a second implementation that can drift.
 
-Stdlib only, like the rest of the shop.
+Stdlib only.
 """
 
 from __future__ import annotations

@@ -37,6 +37,8 @@ import typer
 # the four workers live beside this file
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import paths  # noqa: E402  (after the path insert above)
+
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
@@ -118,9 +120,9 @@ def new(
     for sub in ("masters/takes", "artwork", "video"):
         (track_dir / sub).mkdir(parents=True, exist_ok=True)
 
-    tpl = template or (Path(__file__).resolve().parent / "song-template.md")
+    tpl = template or paths.song_template()
     song = track_dir / "song.md"
-    if tpl.is_file():
+    if tpl and tpl.is_file():
         text = tpl.read_text(encoding="utf-8")
         text = (text
                 .replace("<kebab-case-folder-name>", slug)
@@ -262,7 +264,7 @@ def studio(
         return
 
     if open_page:
-        page = Path(__file__).resolve().parent / "studio" / "index.html"
+        page = paths.page()
         if not page.is_file():
             _fail(f"No studio page at {page}.")
         launcher = _write_launcher(page, report_data, src.name, advice, analysis_path)
@@ -481,7 +483,7 @@ def scope(
             typer.echo("")
             typer.echo(advice)
 
-    studio_dir = Path(__file__).resolve().parent / "studio"
+    studio_dir = paths.web_dir()
     page = studio_dir / "index.html"
     if open_player:
         if not page.is_file():

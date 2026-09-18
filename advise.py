@@ -32,6 +32,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import paths
+
 log = logging.getLogger("advise")
 
 OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -39,8 +41,8 @@ DEFAULT_MODEL = os.environ.get("ADVISE_MODEL", "anthropic/claude-sonnet-4.5")
 TIMEOUT = 90
 
 SYSTEM = """\
-You are the mastering engineer for a small imprint that publishes original music \
-to YouTube. You are given measurements of one audio file. You cannot hear it — \
+You are a mastering engineer preparing original music for streaming platforms \
+and YouTube. You are given measurements of one audio file. You cannot hear it — \
 every claim you make must rest on a number in the data, and you should quote the \
 number when you make it.
 
@@ -93,16 +95,8 @@ class AdviseError(RuntimeError):
 
 
 def env_path() -> Path:
-    """Where this repo keeps its secrets: a .env beside the code.
-
-    MUSIC_STUDIO_ENV overrides it, which is what an installed copy or a test
-    needs — once this is a package, the module's own location stops being a
-    sensible guess about where a user's configuration lives.
-    """
-    override = os.environ.get("MUSIC_STUDIO_ENV")
-    if override:
-        return Path(override).expanduser()
-    return Path(__file__).resolve().parent / ".env"
+    """Where this repo keeps its secrets. See paths.env_file()."""
+    return paths.env_file()
 
 
 def _load_env_key() -> str | None:
@@ -111,15 +105,11 @@ def _load_env_key() -> str | None:
     THE ENVIRONMENT WINS. An exported variable overrides the file, so a shell
     or a CI job can supply the key without anything being written to disk.
 
-    This used to walk up to `parents[2]/print-shop/.env`, which resolved
-    correctly only while this code lived inside the atlas-city-press tree.
-    After the extraction it pointed at a directory that does not exist, and
-    because a missing key is a warning rather than an error, every AI feature
-    went quietly keyless: advice, the EQ chat and the timeline commentary all
-    degraded with nothing on screen to say why.
-
-    A relative walk into a sibling repository is the assumption that broke, so
-    it is gone rather than repaired. Nothing here reaches outside this repo.
+    A missing key is a warning rather than an error, so every AI feature
+    degrades quietly: advice, the EQ chat and the timeline commentary stop
+    answering with nothing on screen to say why. That makes WHERE the key is
+    read from worth being strict about — the lookup never reaches outside this
+    project, and TestKeyLookup asserts it.
     """
     key = os.environ.get("OPENROUTER_API_KEY")
     if key:

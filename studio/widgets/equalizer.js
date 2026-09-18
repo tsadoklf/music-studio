@@ -116,7 +116,7 @@ const EQ_DEFAULT_BANDS = [
   { id: 'high', type: 'highshelf', f: 8000, g: 0, q: 0.7, enabled: true },
 ];
 
-const EQ_FS = 48000;         // the shop's delivery rate; the curve is drawn at it
+const EQ_FS = 48000;         // the delivery rate; the curve is drawn at it
 
 /* --- auto gain compensation ----------------------------------------------
    A boost in the monitor path is a boost with nothing after it. The engine's
@@ -1394,7 +1394,7 @@ function EqualizerPanel(host) {
          drawn against a level scale rather than a byte scale.
 
          The Nyquist here is the AUDIO CONTEXT's, not EQ_FS. The curve is
-         drawn at the shop's 48 kHz delivery rate, but the analyser's bins are
+         drawn at the 48 kHz delivery rate, but the analyser's bins are
          spaced by whatever rate the browser opened its context at — 44.1 kHz
          on most Macs. Using EQ_FS for both put every bin about 9% too high on
          the axis, which is a third of a semitone of misalignment at the very

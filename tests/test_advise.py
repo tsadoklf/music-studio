@@ -129,15 +129,12 @@ class TestKeyHandling(unittest.TestCase):
 class TestKeyLookup(unittest.TestCase):
     """Where the key is read FROM.
 
-    This exists because the extraction of this code into its own repository
-    broke exactly that, and nothing noticed. `_load_env_key` walked up to
-    `parents[2]/print-shop/.env`, which resolved correctly only while the code
-    sat inside the atlas-city-press tree; afterwards it pointed at a directory
-    that does not exist. Every AI feature went keyless, and because a missing
-    key is a warning rather than an error, the failure was silent.
+    A lookup that resolves outside the project is the failure mode here: it
+    once did, nothing noticed, and every AI feature went keyless in silence
+    because a missing key is a warning rather than an error.
 
-    The existing tests all stubbed `_load_env_key` out, so none of them could
-    have caught it. These check the lookup itself.
+    The other tests in this file all stub `_load_env_key` out, so none of them
+    exercises the lookup. These do.
     """
 
     def setUp(self):

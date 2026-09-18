@@ -25,7 +25,7 @@ Three rules, all enforced here rather than trusted to the caller:
   * Everything under --root, nothing above it. Every path argument is resolved
     and must still be inside the root afterwards, which is what stops `../`.
 
-Stdlib only, like the rest of the shop.
+Stdlib only.
 """
 
 from __future__ import annotations
@@ -46,10 +46,13 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import paths
+
 log = logging.getLogger("serve")
 
-HERE = Path(__file__).resolve().parent
-STUDIO = HERE / "studio"
+# Asset locations come from paths.py, so that packaging this module does not
+# silently move the browser page out from under the server. See paths.py.
+STUDIO = paths.web_dir()
 PYTHON = sys.executable or "python3"
 
 TOKEN_TTL = 120.0          # seconds a confirmation stays valid
@@ -157,7 +160,7 @@ def build_argv(name: str, options: dict, root: Path) -> list[str]:
     if cmd is None:
         raise ServeError(f"unknown command: {name}")
 
-    argv = [PYTHON, str(HERE / cmd.script)]
+    argv = [PYTHON, str(paths.script(cmd.script))]
     for key, value in (options or {}).items():
         kind = cmd.options.get(key)
         if kind is None:

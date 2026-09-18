@@ -17,7 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import paths
+from music_studio import paths
 
 
 class _Env(unittest.TestCase):
@@ -83,10 +83,10 @@ class TestRelocation(_Env):
             os.environ["MUSIC_STUDIO_ROOT"] = tmp
             root = Path(tmp).resolve()
             self.assertEqual(paths.root(), root)
-            self.assertEqual(paths.web_dir(), root / "studio")
-            self.assertEqual(paths.page(), root / "studio" / "index.html")
+            self.assertEqual(paths.web_dir(), root / "web")
+            self.assertEqual(paths.page(), root / "web" / "index.html")
             self.assertEqual(paths.env_file(), root / ".env")
-            self.assertEqual(paths.script("analyze.py"), root / "analyze.py")
+            self.assertEqual(paths.script("analyze.py"), root / "audio" / "analyze.py")
 
     def test_web_override_beats_the_root(self):
         """A packaged copy may keep its data somewhere the root cannot reach."""
@@ -111,15 +111,44 @@ class TestRelocation(_Env):
         self.assertNotIn("~", str(paths.env_file()))
 
 
+class TestProjectRoot(_Env):
+    """The .env is USER configuration, not package data.
+
+    Conflating "where the code is" with "where the checkout is" broke the key
+    lookup twice: once when this code moved to its own repository, and again
+    when it moved into src/. The package root is src/music_studio/; a person
+    puts their .env beside pyproject.toml.
+    """
+
+    def test_project_root_is_above_the_package(self):
+        self.assertNotEqual(paths.project_root(), paths.root())
+        self.assertIn(paths.project_root(), paths.root().parents)
+
+    def test_project_root_holds_pyproject(self):
+        self.assertTrue((paths.project_root() / "pyproject.toml").is_file())
+
+    def test_env_file_sits_at_the_project_root(self):
+        self.assertEqual(paths.env_file().parent, paths.project_root())
+
+    def test_env_file_is_findable(self):
+        """Not just well-named: the file the AI features need must resolve.
+
+        This is the assertion that would have caught both regressions."""
+        self.assertTrue(paths.env_file().is_file()
+                        or os.environ.get("OPENROUTER_API_KEY"),
+                        f"no key reachable: {paths.env_file()} missing and "
+                        "OPENROUTER_API_KEY unset")
+
+
 class TestCallersUseIt(unittest.TestCase):
     """The point of the module is that nothing else hardcodes these."""
 
-    def test_serve_takes_its_studio_directory_from_paths(self):
-        import serve
-        self.assertEqual(serve.STUDIO, paths.web_dir())
+    def test_serve_takes_its_web_directory_from_paths(self):
+        from music_studio.serve import http
+        self.assertEqual(http.STUDIO, paths.web_dir())
 
     def test_advise_env_path_delegates(self):
-        import advise
+        from music_studio.insight import advise
         self.assertEqual(advise.env_path(), paths.env_file())
 
 

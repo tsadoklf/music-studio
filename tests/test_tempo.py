@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-import tempo
+from music_studio.audio import tempo
 
 RATE = 44100
 

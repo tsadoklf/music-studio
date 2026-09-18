@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-import master
+from music_studio.audio import master
 
 HAVE_FFMPEG = shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
 needs_ffmpeg = unittest.skipUnless(HAVE_FFMPEG, "ffmpeg not on PATH")

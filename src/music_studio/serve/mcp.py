@@ -43,9 +43,8 @@ import logging
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from serve import COMMANDS, ServeError, _display, _run, build_argv   # noqa: E402
+from music_studio.serve.http import COMMANDS, ServeError, _display, _run, build_argv   # noqa: E402
 
 log = logging.getLogger("mcp")
 

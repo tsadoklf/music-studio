@@ -25,10 +25,15 @@ import unittest
 from dataclasses import fields
 from pathlib import Path
 
-import maximize
-from maximize import PRESETS, Settings
+from music_studio import paths
+from music_studio.audio import maximize
+from music_studio.audio.maximize import PRESETS, Settings
 
-PANEL = Path(__file__).resolve().parent.parent / "studio/widgets/maximizer.js"
+# Asked of paths.web_dir() rather than computed here. A second guess at where
+# the page lives is a guess that can be wrong while still LOOKING right: this
+# file's skipUnless turns a wrong path into six silent skips, and a drift
+# guard that skips is worse than no guard at all.
+PANEL = paths.web_dir() / "widgets" / "maximizer.js"
 HAVE_NODE = shutil.which("node") is not None
 
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-import serve
+from music_studio.serve import http as serve
 
 
 # The tooling directory, one level up from tests/ — this is the root the server
@@ -125,8 +125,15 @@ class TestWriteClassification(unittest.TestCase):
             self.assertFalse(serve.COMMANDS[name].writes, f"{name} marked as writing")
 
     def test_every_command_names_a_script_that_exists(self):
+        """Resolved through paths.script(), which is what the server uses.
+
+        Checking `ROOT / cmd.script` instead would be a second guess at where
+        the file is, and it would agree with the server only by coincidence —
+        it stopped agreeing the moment these modules moved into sub-packages.
+        """
+        from music_studio import paths
         for name, cmd in serve.COMMANDS.items():
-            self.assertTrue((ROOT / cmd.script).is_file(),
+            self.assertTrue(paths.script(cmd.script).is_file(),
                             f"{name} points at missing {cmd.script}")
 
 

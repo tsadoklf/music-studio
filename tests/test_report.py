@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import unittest
 
-import report
+from music_studio.insight import report
 
 
 def analysis(**over) -> dict:

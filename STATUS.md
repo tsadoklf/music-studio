@@ -29,11 +29,11 @@ The page is optional. The CLI is not.
 ## Run it
 
 ```sh
-python3.12 -m venv .venv && ./.venv/bin/pip install -r requirements.txt   # first time
-./.venv/bin/python music.py studio <file.wav>          # measure + report, one step
-./.venv/bin/python music.py serve <audio-dir>          # the page, on 127.0.0.1:8770
-./.venv/bin/python music.py maximize <file> --preset loud   # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 242 tests
+python3.12 -m venv .venv && ./.venv/bin/pip install -e .   # first time
+./.venv/bin/music studio <file.wav>                    # measure + report, one step
+./.venv/bin/music serve <audio-dir>                    # the page, on 127.0.0.1:8770
+./.venv/bin/music maximize <file> --preset loud        # then `master` for the ceiling
+./.venv/bin/python -m unittest discover -s tests -t .  # 255 tests
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -46,22 +46,22 @@ then, which it says on screen.
 
 | File | Does |
 |---|---|
-| `music.py` | The CLI. Every command is a thin wrapper over one of the below. |
-| `analyze.py` | The measurement engine. One pass → one `audio-analysis/v1` JSON. |
-| `master.py` | Two-pass EBU R128 loudness + true peak, and the `--eq` presets. |
-| `maximize.py` | Compressor, stereo imager, maximizer, soft clip — an MClass-style suite. |
-| `tempo.py` | Tempo, metre and key estimation, each with a confidence. |
-| `timeline.py` | Dated findings — where it clips, peaks, runs off target. |
-| `report.py` | Verdicts → `REPORT.md` (for a person) and `report.ai.md` (for an agent). |
-| `advise.py` | Asks a model what the measurements mean. Recommends; never runs. |
-| `eqchat.py` | Plain language → equaliser bands. Returns data, never commands. |
-| `compare.py` | Null test: hear exactly what processing changed. |
-| `studio_run.py` | Analyse + report + advise in one call. What the page's button runs. |
+| `cli.py` | The CLI (`music`). Every command is a thin wrapper over one of the below. |
+| `audio/analyze.py` | The measurement engine. One pass → one `audio-analysis/v1` JSON. |
+| `audio/master.py` | Two-pass EBU R128 loudness + true peak, and the `--eq` presets. |
+| `audio/maximize.py` | Compressor, stereo imager, maximizer, soft clip — an MClass-style suite. |
+| `audio/tempo.py` | Tempo, metre and key estimation, each with a confidence. |
+| `insight/timeline.py` | Dated findings — where it clips, peaks, runs off target. |
+| `insight/report.py` | Verdicts → `REPORT.md` (for a person) and `report.ai.md` (for an agent). |
+| `insight/advise.py` | Asks a model what the measurements mean. Recommends; never runs. |
+| `insight/eqchat.py` | Plain language → equaliser bands. Returns data, never commands. |
+| `audio/compare.py` | Null test: hear exactly what processing changed. |
+| `insight/studio_run.py` | Analyse + report + advise in one call. What the page's button runs. |
 | `paths.py` | Where the page, the template, the .env and the scripts are. Asked once, never recomputed. |
-| `serve.py` | Loopback HTTP server. What turns a click in the page into a process. |
-| `mcp_server.py` | The same commands as MCP tools, for an agent. Generated from serve.py's table. |
+| `serve/http.py` | Loopback HTTP server. What turns a click in the page into a process. |
+| `serve/mcp.py` | The same commands as MCP tools, for an agent. Generated from serve.py's table. |
 | `studio/widgets/maximizer.js` | The suite's panel: live preview, GR meters, and the command that renders it. |
-| `trackvideo.py` | Audio + artwork → an upload-ready MP4 and thumbnail. |
+| `audio/trackvideo.py` | Audio + artwork → an upload-ready MP4 and thumbnail. |
 
 ### Three front doors, on purpose
 
@@ -70,15 +70,15 @@ They are not alternatives; they answer different questions.
 | | Gives an agent | Cannot |
 |---|---|---|
 | `SKILL.md` | the workflow and the judgement — when to master, why publishing before mastering is unrecoverable | execute anything |
-| `serve.py` | the browser page, and commands for a human at a keyboard | be called by an agent without a browser |
-| `mcp_server.py` | the commands as typed tools with readable schemas | supply the judgement about when to use them |
+| `serve/http.py` | the browser page, and commands for a human at a keyboard | be called by an agent without a browser |
+| `serve/mcp.py` | the commands as typed tools with readable schemas | supply the judgement about when to use them |
 
 An agent with only the skill must compose `music master <track> --lufs -14` as
 text and hope the shell agrees. Over MCP it calls `master(in=..., lufs=-14)`
 against a declared schema, and a wrong argument is a validation error rather
 than a mangled command. The skill supplies judgement; MCP supplies hands.
 
-The MCP tool list is GENERATED from `serve.py`'s `COMMANDS` table and calls its
+The MCP tool list is GENERATED from `serve/http.py`'s `COMMANDS` table and calls its
 validator, so path containment, the option whitelist and argv-not-shell are the
 same code, not a second implementation that can drift. Adding a command there
 exposes it in both places.
@@ -88,7 +88,7 @@ Register it with:
 ```json
 { "mcpServers": { "music-studio": {
     "command": "/path/to/music-studio/.venv/bin/python",
-    "args": ["/path/to/music-studio/mcp_server.py", "--root", "/path/to/audio"] } } }
+    "args": ["-m", "music_studio.serve.mcp", "--root", "/path/to/audio"] } } }
 ```
 
 `--read-only` refuses every tool that writes audio. `master` additionally
@@ -115,7 +115,7 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 242 tests total, all passing.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 255 tests total, all passing.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -213,7 +213,7 @@ the case; this is the index.
 6. **Confidence means "this damages the audio", not "a filter exists."** A
    cutoff above 19 kHz is reported with confidence 0 — inaudible, and flagging
    every 320 kbps source cries wolf.
-7. **`serve.py` builds argv, never a shell string.** A request names a command
+7. **`serve/http.py` builds argv, never a shell string.** A request names a command
    from a fixed table and supplies typed arguments; `shell=False` always. Path
    arguments must resolve inside `--root`. Loopback binding only. 20 tests
    guard this; do not add a `--host` escape hatch.
@@ -286,7 +286,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from the repo root. 242, all passing. Keep it that way.
+  from the repo root. 255, all passing. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on

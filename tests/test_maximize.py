@@ -19,8 +19,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import maximize
-from maximize import PRESETS, Settings, build_chain, chain_string, resolve
+from music_studio.audio import maximize
+from music_studio.audio.maximize import PRESETS, Settings, build_chain, chain_string, resolve
 
 HAVE_FFMPEG = shutil.which("ffmpeg") is not None
 needs_ffmpeg = unittest.skipUnless(HAVE_FFMPEG, "ffmpeg not on PATH")

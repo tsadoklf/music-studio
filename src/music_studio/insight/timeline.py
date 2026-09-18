@@ -349,7 +349,7 @@ def add_comments(items: list[dict], context: dict) -> list[dict]:
     if not items:
         return items
     try:
-        from advise import AdviseError, DEFAULT_MODEL, _load_env_key
+        from music_studio.insight.advise import AdviseError, DEFAULT_MODEL, _load_env_key
         import json as _json
         import urllib.request
 

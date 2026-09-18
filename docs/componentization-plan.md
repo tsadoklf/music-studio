@@ -190,7 +190,23 @@ Also settle `song-template.md` here — it is absent from this repo, so
 `music new` degrades to a stub. Either vendor it as package data or drop the
 command's dependency on it.
 
-### Phase 2 — the move
+### Phase 2 — the move — **DONE**
+
+Shipped in #4. One thing the plan did not anticipate: the `.env` lookup broke
+again, because `paths.root()` moved into `src/music_studio/` with the code
+while the `.env` stayed at the checkout root where a person puts it. Fixed by
+separating `project_root()` from `root()` — they are different questions, and
+conflating them is what broke the key twice. Four tests now assert the
+difference.
+
+Also caught: `test_panel_presets` silently skipped all six of its checks
+because its hardcoded path to the browser panel no longer resolved. A drift
+guard that skips is worse than no guard, so it asks `paths.web_dir()` now.
+
+The original description follows, for the record.
+
+---
+
 
 `git mv` into `src/music_studio/` with the groups above, add `pyproject.toml`
 with a `music = "music_studio.cli:app"` entry point, and switch the two test
@@ -277,7 +293,7 @@ tests and visible only on screen.
 |---|---|---|
 | 0 | API key lookup no longer walks into a sibling repo | **done** (#2) |
 | 1 | `paths.py`; `song-template.md` settled | **done** (#3) |
-| 2 | `src/` layout, `pyproject.toml`, `music` entry point | not started |
+| 2 | `src/` layout, `pyproject.toml`, `music` entry point | **done** (#4) |
 | 3 | thin `cli.py` | not started |
 | 4 | shared constants; `audio/` stops importing `insight/` | not started |
 | 5 | split `studio.js` | not started |

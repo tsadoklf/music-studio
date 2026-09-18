@@ -40,7 +40,6 @@ import sys
 from dataclasses import dataclass, asdict, fields, replace
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 log = logging.getLogger("maximize")
 

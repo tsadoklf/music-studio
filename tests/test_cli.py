@@ -1071,9 +1071,13 @@ class TestWriteLauncher(_Tmp):
 class TestYouTubeCommandsAreMissing(_Tmp):
     """KNOWN HOLE, not a passing feature.
 
-    `check` and `publish` both need a `ytpublish` module that has never been
-    written, so neither command can work. These tests pin that — and pin the
-    SHAPE of the failure, which is the part that was worth fixing.
+    `publish` needs a `ytpublish` module that has never been written, so it
+    cannot work. This pins that — and pins the SHAPE of the failure, which is
+    the part that was worth fixing.
+
+    `check` used to be in the same position and no longer is: it validates
+    song.md directly now, with no network and no upload module, which is why
+    it was worth building first.
 
     Until recently the ImportError escaped `_fail()` and a user got a raw
     traceback: a stack trace is the wrong answer to "why did this not work",
@@ -1097,12 +1101,17 @@ class TestYouTubeCommandsAreMissing(_Tmp):
         self.assertIn("not available", out)
         return out
 
-    def test_check_fails_readably_because_ytpublish_is_absent(self):
+    def test_check_no_longer_needs_ytpublish(self):
+        """`check` was rewritten to validate song.md directly, so it must NOT
+        be in this class's territory any more. It reads a file and applies
+        rules; nothing about that needs an upload module."""
         song = self.tmp / "song.md"
-        song.write_text("---\nslug: x\n---\n", encoding="utf-8")
-        out = self._expect_missing(["check", str(song)])
-        # It must also say what still works, or the message reads as "broken".
-        self.assertIn("master", out)
+        song.write_text("---\nslug: x\nchannel: y\n---\n", encoding="utf-8")
+        result = runner.invoke(app, ["check", str(song)])
+        out = result.stdout + (result.stderr or "")
+        self.assertNotIn("ytpublish", out)
+        # It still exits non-zero: that file has no title, description or tags.
+        self.assertNotEqual(result.exit_code, 0)
 
     def test_publish_fails_readably_because_ytpublish_is_absent(self):
         song = self.tmp / "song.md"

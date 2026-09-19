@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
 """Tests for advise.py and the targets contract.
 
-No test here calls a model. What is worth testing is the part that is ours: that
-the digest keeps the numbers a decision rests on and drops the megabytes that it
-does not, and that the delivery targets travel with the analysis instead of
-being copied into consumers.
+No test here reaches the network. What is worth testing is the part that is
+ours: that the digest keeps the numbers a decision rests on and drops the
+megabytes that it does not, that the delivery targets travel with the analysis
+instead of being copied into consumers, and — the classes at the bottom — that
+the request we build and the replies we accept are the ones we meant.
+
+`urllib.request.urlopen` is patched everywhere below. A test that hit OpenRouter
+would cost money, need a key, and fail on a plane.
 """
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import subprocess
 import tempfile
-from pathlib import Path
 import unittest
+import unittest.mock
+import urllib.error
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from music_studio.insight import advise
 from music_studio.audio import master
@@ -194,6 +203,308 @@ class TestKeyLookup(unittest.TestCase):
     def test_missing_file_is_not_an_error(self):
         os.environ["MUSIC_STUDIO_ENV"] = "/nonexistent/nowhere/.env"
         self.assertIsNone(advise._load_env_key())
+
+    def test_a_env_file_without_the_key_reads_as_no_key(self):
+        """A .env holding only the Etsy credentials is a real state. Returning
+        the file's first line, or raising, would both be worse than None — the
+        caller's job is to say "no OPENROUTER_API_KEY", and it can only do that
+        if it is told none was found."""
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Path(tmp) / ".env"
+            env.write_text("SOMETHING_ELSE=1\n# OPENROUTER_API_KEY=commented-out\n")
+            os.environ["MUSIC_STUDIO_ENV"] = str(env)
+            self.assertIsNone(advise._load_env_key())
+
+
+# --------------------------------------------------------------------------
+# the call itself
+# --------------------------------------------------------------------------
+
+class _FakeResponse(io.BytesIO):
+    """What urlopen returns: a context manager over bytes."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+        return False
+
+
+def _reply(content: str) -> _FakeResponse:
+    return _FakeResponse(json.dumps(
+        {"choices": [{"message": {"content": content}}]}).encode("utf-8"))
+
+
+def _http_error(code: int, body: bytes = b"over quota") -> urllib.error.HTTPError:
+    return urllib.error.HTTPError("https://openrouter.ai", code, "nope", {},
+                                  io.BytesIO(body))
+
+
+class _Called(unittest.TestCase):
+    """Base for tests that inspect the request advise() builds."""
+
+    def setUp(self):
+        key = unittest.mock.patch.object(advise, "_load_env_key",
+                                         return_value="sk-test")
+        key.start()
+        self.addCleanup(key.stop)
+
+    def call(self, analysis, question=None, reply="looks fine", **kw):
+        """Run advise() against a canned reply and keep the Request object."""
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 return_value=_reply(reply)) as opened:
+            answer = advise.advise(analysis, question, **kw)
+        self.request = opened.call_args[0][0]
+        self.body = json.loads(self.request.data.decode("utf-8"))
+        return answer
+
+
+class TestRequestShape(_Called):
+    """What actually goes on the wire."""
+
+    def test_the_answer_is_returned_stripped(self):
+        self.assertEqual(self.call(_analysis(), reply="  fine  \n"), "fine")
+
+    def test_the_key_travels_as_a_bearer_header(self):
+        self.call(_analysis())
+        self.assertEqual(self.request.headers["Authorization"], "Bearer sk-test")
+
+    def test_the_key_is_never_put_in_the_body(self):
+        """A key in the JSON would be logged by every proxy in between and
+        echoed back in the 'unexpected response shape' error."""
+        self.call(_analysis())
+        self.assertNotIn("sk-test", self.request.data.decode("utf-8"))
+
+    def test_it_posts_to_openrouter_over_https(self):
+        self.call(_analysis())
+        self.assertEqual(self.request.full_url, advise.OPENROUTER_CHAT_URL)
+        self.assertTrue(self.request.full_url.startswith("https://"))
+
+    def test_the_system_prompt_is_sent_as_the_system_role(self):
+        """Folding it into the user turn loses the priority a system message
+        carries, and the rules in it are the reason the answers are usable."""
+        self.call(_analysis())
+        system = self.body["messages"][0]
+        self.assertEqual(system["role"], "system")
+        self.assertEqual(system["content"], advise.SYSTEM)
+
+    def test_the_temperature_is_low(self):
+        """This is a report reading, not a brainstorm. The same measurements
+        should produce the same advice twice."""
+        self.call(_analysis())
+        self.assertLessEqual(self.body["temperature"], 0.3)
+
+    def test_the_model_can_be_overridden(self):
+        self.call(_analysis(), model="some/other-model")
+        self.assertEqual(self.body["model"], "some/other-model")
+
+    def test_an_explicit_key_beats_the_lookup(self):
+        """So a caller holding a key does not need it written to disk first."""
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 return_value=_reply("ok")) as opened:
+            advise.advise(_analysis(), api_key="sk-passed-in")
+        self.assertEqual(opened.call_args[0][0].headers["Authorization"],
+                         "Bearer sk-passed-in")
+
+    def test_a_timeout_is_set(self):
+        """Without one, a stalled connection hangs the studio panel forever
+        with no way to cancel from the page."""
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 return_value=_reply("ok")) as opened:
+            advise.advise(_analysis())
+        self.assertEqual(opened.call_args[1]["timeout"], advise.TIMEOUT)
+
+
+class TestUserMessage(_Called):
+    """The user turn is where the measurements live. The system prompt tells
+    the model to quote numbers; this is where the numbers have to be."""
+
+    def test_the_measurements_are_sent_as_json(self):
+        self.call(_analysis())
+        user = self.body["messages"][1]["content"]
+        self.assertIn('"integrated_lufs": -12.2', user)
+        self.assertIn('"true_peak_dbtp": 0.54', user)
+
+    def test_the_bulk_never_reaches_the_prompt(self):
+        """The spectrogram is most of a 2.5 MB analysis and none of the
+        argument. Sending it costs tokens and buys nothing."""
+        self.call(_analysis())
+        user = self.body["messages"][1]["content"]
+        self.assertNotIn("spectrogram", user)
+        self.assertLess(len(user), 4000, "the digest let the bulk through")
+
+    def test_the_question_is_carried_verbatim(self):
+        self.call(_analysis(), "why does this sound dull?")
+        self.assertIn("why does this sound dull?", self.body["messages"][1]["content"])
+
+    def test_a_default_question_is_asked_when_none_is_given(self):
+        self.call(_analysis())
+        self.assertIn("Question:", self.body["messages"][1]["content"])
+
+    def test_no_analysis_says_so_instead_of_sending_nulls(self):
+        """The regression this branch exists for: saying Hi with nothing
+        loaded used to send a block of nulls to a model instructed to quote
+        numbers, which got either a refusal or an invention."""
+        self.call({}, "hi")
+        user = self.body["messages"][1]["content"]
+        self.assertIn("No file is loaded", user)
+        self.assertNotIn("null", user)
+
+    def test_an_analysis_with_no_measurements_counts_as_none(self):
+        """A half-written analysis.json — schema present, nothing measured —
+        is the same situation as no file at all."""
+        self.call({"schema": "audio-analysis/v1", "spectrum": {}}, "hi")
+        self.assertIn("No file is loaded", self.body["messages"][1]["content"])
+
+    def test_metadata_alone_is_enough_to_count_as_loaded(self):
+        """A file that failed measurement still has a name and a duration, and
+        a question about it is about that file, not a general one."""
+        self.call({"metadata": {"filename": "x.wav", "duration": 12.0}}, "what is this?")
+        self.assertNotIn("No file is loaded", self.body["messages"][1]["content"])
+
+
+class TestFailures(unittest.TestCase):
+    """Every one of these reaches a person as a line in a panel, so it has to
+    say what went wrong rather than raise a urllib traceback."""
+
+    def setUp(self):
+        key = unittest.mock.patch.object(advise, "_load_env_key",
+                                         return_value="sk-test")
+        key.start()
+        self.addCleanup(key.stop)
+
+    def test_an_http_error_reports_the_code_and_the_body(self):
+        """401 and 429 need different reactions from a person, and the body is
+        where OpenRouter says which."""
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 side_effect=_http_error(429, b"rate limited")):
+            with self.assertRaises(advise.AdviseError) as c:
+                advise.advise(_analysis())
+        self.assertIn("429", str(c.exception))
+        self.assertIn("rate limited", str(c.exception))
+
+    def test_a_giant_error_body_is_truncated(self):
+        """Some gateways return an HTML page. Putting all of it in a log line
+        buries everything else on screen."""
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 side_effect=_http_error(500, b"x" * 10000)):
+            with self.assertRaises(advise.AdviseError) as c:
+                advise.advise(_analysis())
+        self.assertLess(len(str(c.exception)), 500)
+
+    def test_an_unreachable_host_says_so(self):
+        """Offline is the most common failure by far and must not look like a
+        bug in the tool."""
+        with unittest.mock.patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("nodename nor servname provided")):
+            with self.assertRaises(advise.AdviseError) as c:
+                advise.advise(_analysis())
+        self.assertIn("Could not reach OpenRouter", str(c.exception))
+
+    def test_a_reply_with_no_choices_is_a_readable_error(self):
+        """OpenRouter returns {"error": ...} with a 200 when a model is
+        unavailable, so this is a real shape, not a hypothetical."""
+        body = _FakeResponse(json.dumps({"error": {"message": "no such model"}}).encode())
+        with unittest.mock.patch("urllib.request.urlopen", return_value=body):
+            with self.assertRaises(advise.AdviseError) as c:
+                advise.advise(_analysis())
+        self.assertIn("Unexpected response shape", str(c.exception))
+
+    def test_an_empty_choices_list_is_a_readable_error(self):
+        body = _FakeResponse(json.dumps({"choices": []}).encode())
+        with unittest.mock.patch("urllib.request.urlopen", return_value=body):
+            with self.assertRaises(advise.AdviseError):
+                advise.advise(_analysis())
+
+
+class TestMain(unittest.TestCase):
+    """The CLI. serve.py runs this as a subprocess and reads stdout, so what
+    lands on stdout is an interface, not a convenience."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        quiet = unittest.mock.patch.object(advise.log, "error")
+        quiet.start()
+        self.addCleanup(quiet.stop)
+
+    def _analysis_file(self, data=None) -> Path:
+        p = self.tmp / "analysis.json"
+        p.write_text(json.dumps(data if data is not None else _analysis()))
+        return p
+
+    def _run(self, argv, answer="looks fine"):
+        buf = io.StringIO()
+        with unittest.mock.patch.object(advise, "advise", return_value=answer), \
+                redirect_stdout(buf):
+            rc = advise.main(argv)
+        return rc, buf.getvalue()
+
+    def test_prints_the_answer(self):
+        rc, out = self._run(["--analysis", str(self._analysis_file())])
+        self.assertEqual(rc, 0)
+        self.assertIn("looks fine", out)
+
+    def test_json_mode_emits_one_parseable_object(self):
+        """The studio panel parses this. A stray log line on stdout would make
+        it unparseable, which is why logging goes to stderr."""
+        rc, out = self._run(["--analysis", str(self._analysis_file()), "--json"])
+        payload = json.loads(out)
+        self.assertEqual(payload["answer"], "looks fine")
+        self.assertEqual(payload["facts"]["integrated_lufs"], -12.2)
+
+    def test_facts_only_never_calls_a_model(self):
+        """The panel uses it to fill its numbers without spending a token."""
+        buf = io.StringIO()
+        with unittest.mock.patch.object(advise, "advise") as called, \
+                redirect_stdout(buf):
+            rc = advise.main(["--analysis", str(self._analysis_file()),
+                              "--facts-only"])
+        self.assertEqual(rc, 0)
+        called.assert_not_called()
+        self.assertEqual(json.loads(buf.getvalue())["integrated_lufs"], -12.2)
+
+    def test_no_analysis_is_allowed_and_asks_anyway(self):
+        """"Say Hi, get a usage error" is the behaviour this prevents."""
+        buf = io.StringIO()
+        with unittest.mock.patch.object(advise, "advise",
+                                        return_value="hello") as called, \
+                redirect_stdout(buf):
+            rc = advise.main(["--ask", "hi"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(called.call_args[0][0], {})
+        self.assertIn("hello", buf.getvalue())
+
+    def test_a_named_analysis_that_is_missing_is_an_error(self):
+        """Different from giving none: naming a file that is not there is a
+        typo, and silently answering from general knowledge would hide it."""
+        rc, _ = self._run(["--analysis", str(self.tmp / "nope.json")])
+        self.assertEqual(rc, 1)
+
+    def test_the_question_reaches_advise(self):
+        with unittest.mock.patch.object(advise, "advise",
+                                        return_value="x") as called, \
+                redirect_stdout(io.StringIO()):
+            advise.main(["--analysis", str(self._analysis_file()),
+                         "--ask", "is the low end right?"])
+        self.assertEqual(called.call_args[0][1], "is the low end right?")
+
+    def test_a_model_failure_is_an_exit_code_not_a_traceback(self):
+        with unittest.mock.patch.object(
+                advise, "advise", side_effect=advise.AdviseError("no key")), \
+                redirect_stdout(io.StringIO()):
+            rc = advise.main(["--analysis", str(self._analysis_file())])
+        self.assertEqual(rc, 1)
+
+    def test_ctrl_c_is_130(self):
+        with unittest.mock.patch.object(advise, "advise",
+                                        side_effect=KeyboardInterrupt), \
+                redirect_stdout(io.StringIO()):
+            rc = advise.main(["--analysis", str(self._analysis_file())])
+        self.assertEqual(rc, 130)
 
 
 if __name__ == "__main__":

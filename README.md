@@ -23,7 +23,7 @@ python3.12 -m venv .venv && ./.venv/bin/pip install -e .
 ./.venv/bin/music scope <file.wav>            # measure, one JSON out
 ./.venv/bin/music studio <file.wav>           # measure + report
 ./.venv/bin/music serve <audio-dir>           # the page, 127.0.0.1:8770
-./.venv/bin/python -m unittest discover -s tests -t .   # 789 tests
+./.venv/bin/python -m unittest discover -s tests -t .   # 816 tests
 ```
 
 `pip install -e .` puts `music` on the PATH, so with the venv activated the
@@ -56,6 +56,8 @@ are how it finds anything:
 ```sh
 music new <slug> --channel <channel>   # scaffold a track from a template
 music new --list-templates             # what is installed
+music benchmark <a record you trust>.wav --add aja
+music scope <your take>.wav --against aja   # how do you sit beside it
 music serve /path/to/your/audio
 music scope "/path/to/your/audio/<artist>/tracks/<slug>/masters/<take>.wav"
 ```
@@ -76,6 +78,7 @@ src/music_studio/
   serve/        the two front doors
                 http (the page, for a person)  mcp (typed tools, for an agent)
   templates/    scaffolds `music new` copies; drop a .md in to add one
+  insight/benchmark.py  compare against records you trust
   web/          the browser bench — 8 panels, two cascading EQs, the live suite
 ```
 

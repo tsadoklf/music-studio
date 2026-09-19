@@ -246,28 +246,32 @@ def new(
 @app.command()
 def check(
     track: Path = typer.Argument(..., help="Track directory or song.md."),
+    strict: bool = typer.Option(False, "--strict",
+                                help="Also require the rendered video and thumbnail."),
 ) -> None:
-    """Validate a song file's publishing metadata without touching YouTube."""
-    try:
-        from ytpublish import PublishError, parse_song   # type: ignore[import-not-found]
-    except ModuleNotFoundError:
-        # A bare traceback is the wrong answer to "why did this not work".
-        # The module is absent by omission, not by a broken install, and
-        # saying so is the difference between a hole and a bug.
-        _fail("YouTube publishing is not available: the ytpublish module has never been written. "
-        "Everything else works — measure, master, maximize, compare, video. "
-        "See STATUS.md, 'Known broken'.")
+    """Validate a song file's publishing metadata without touching YouTube.
+
+    Every mistake caught here is one that would otherwise be expensive:
+    YouTube cannot replace the video file on an existing upload, so fixing a
+    title typo or unmastered audio after the fact means deleting and
+    re-uploading — losing the URL, the views and the comments.
+
+    No network, no credentials. This runs on a checkout with nothing
+    configured.
+    """
+    from music_studio.insight.songmeta import SongError, parse_song
 
     song = _song_file(track)
     try:
         meta = parse_song(song)
-    except PublishError as exc:
+    except SongError as exc:
         _fail(str(exc))
 
-    problems = meta.validate()
-    typer.echo(f"slug      {meta.slug}")
+    problems = meta.validate(strict=strict)
+    typer.echo(f"slug      {meta.slug or '—'}")
     typer.echo(f"channel   {meta.channel or '—'}")
-    typer.echo(f"title     {meta.title}")
+    typer.echo(f"status    {meta.status or '—'}")
+    typer.echo(f"title     {meta.title or '—'}")
     typer.echo(f"tags      {len(meta.tags)}")
     typer.echo(f"video_id  {meta.video_id or '— (not uploaded)'}")
 
@@ -276,7 +280,8 @@ def check(
         for issue in problems:
             typer.secho(f"  ✗ {issue}", fg=typer.colors.RED)
         raise typer.Exit(1)
-    _ok("\nMetadata is ready to publish.")
+    _ok("\nMetadata is ready to publish."
+        if strict else "\nMetadata is valid. Use --strict before uploading.")
 
 
 @app.command()

@@ -33,7 +33,7 @@ python3.12 -m venv .venv && ./.venv/bin/pip install -e .   # first time
 ./.venv/bin/music studio <file.wav>                    # measure + report, one step
 ./.venv/bin/music serve <audio-dir>                    # the page, on 127.0.0.1:8770
 ./.venv/bin/music maximize <file> --preset loud        # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 823 tests, 92% covered
+./.venv/bin/python -m unittest discover -s tests -t .  # 856 tests, 94% covered
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -53,6 +53,7 @@ then, which it says on screen.
 | `audio/tempo.py` | Tempo, metre and key estimation, each with a confidence. |
 | `audio/timeline.py` | Dated findings — where it clips, peaks, runs off target. Pure. |
 | `insight/timeline.py` | A sentence of commentary per finding, from a model. |
+| `insight/songmeta.py` | Reads a song.md and says whether it is fit to publish. No network. |
 | `insight/benchmark.py` | Compare a track against records you trust. Measurements only, never audio. |
 | `insight/report.py` | Verdicts → `REPORT.md` (for a person) and `report.ai.md` (for an agent). |
 | `insight/advise.py` | Asks a model what the measurements mean. Recommends; never runs. |
@@ -118,7 +119,12 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 823 tests total, all passing. Coverage 92%.
+- **Publishing metadata.** `music check` validates a song.md against what
+  YouTube will actually accept — title, description and tag limits counted in
+  UTF-16 code units the way the API counts them, unfilled template
+  placeholders, and under `--strict` the rendered assets and a `mastered`
+  status. It refuses to bless a release that would cost the URL to fix.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 856 tests total, all passing. Coverage 94%.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -159,11 +165,15 @@ taken from the live page, which is weaker than a test but stronger than a claim:
 
 ### Known broken
 
-- **`music check` and `music publish` cannot work.** `ytpublish.py` has never
-  been written. Both commands now exit with a sentence saying so and naming
-  what does work, rather than the raw traceback they used to produce — but the
-  hole is unchanged: this pipeline can measure, master, report and render
-  video, and it **cannot publish**. That is the largest gap left.
+- **`music publish` cannot work.** `ytpublish.py` has never been written. The
+  command exits with a sentence saying so and naming what does work, rather
+  than the raw traceback it used to produce — but the hole is unchanged: this
+  pipeline can measure, master, report, render video and **validate** a
+  release, and it cannot upload one. That is the last gap.
+
+  `music check` used to share that fate and no longer does: it reads song.md
+  directly, with no network and no credential, and refuses a release that
+  would be expensive to fix. See "Works, and is tested".
 
 ### Not verified by anyone
 
@@ -309,7 +319,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from the repo root. 823, all passing, 92% covered. Keep it that way.
+  from the repo root. 856, all passing, 94% covered. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on

@@ -489,6 +489,8 @@ def scope(
     open_player: bool = typer.Option(False, "--open", help="Open the studio page on the result."),
     with_advice: bool = typer.Option(False, "--advise",
                                      help="Also ask a model what to do, and show it on the page."),
+    against: Optional[str] = typer.Option(None, "--against",
+                                          help="Compare against a benchmark. See `music benchmark --list`."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Analyse a track and write the JSON the studio page reads.
@@ -539,6 +541,17 @@ def scope(
                     f"in {clip.get('runs')} runs.", fg=typer.colors.YELLOW)
 
     _ok(f"Wrote {dst}")
+
+    if against:
+        # A target says "legal". A benchmark says "how do you sit against
+        # something that works", which is the question a target cannot answer.
+        from music_studio.insight.benchmark import (BenchmarkError, compare,
+                                                    load, render)
+        try:
+            typer.echo("")
+            typer.echo(render(compare(report, load(against))))
+        except BenchmarkError as exc:
+            _fail(str(exc))
 
     advice = None
     if with_advice:
@@ -708,6 +721,70 @@ def publish(
         argv.append("--verbose")
 
     raise typer.Exit(ytpublish.main(argv))
+
+
+@app.command()
+def benchmark(
+    track: Optional[Path] = typer.Argument(None, help="Audio file or track directory to add."),
+    audio: Optional[Path] = typer.Option(None, "--audio", help="Defaults to masters/master.wav."),
+    add: Optional[str] = typer.Option(None, "--add", help="Save this track as a benchmark under this name."),
+    note: str = typer.Option("", "--note", help="One line on what the benchmark is for."),
+    title: Optional[str] = typer.Option(None, "--title", help="Display name. Defaults to the filename."),
+    list_them: bool = typer.Option(False, "--list", help="Show the installed benchmarks."),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Keep a library of records to measure your own against.
+
+    A delivery target says a track should sit near -14 LUFS. It cannot say
+    whether 7.5 LU of range is generous or mean — that question only has
+    answers relative to records that already work.
+
+    A benchmark is the MEASUREMENTS of such a record, a few hundred bytes. The
+    audio is neither stored nor needed, which is what makes a library of
+    commercial references possible at all.
+
+        music benchmark --list
+        music benchmark <a record you trust>.wav --add aja --note "..."
+        music scope <your take>.wav --against aja
+    """
+    from music_studio.insight.benchmark import (BenchmarkError, available,
+                                                library_dir, save)
+
+    _setup_logging(verbose)
+
+    if list_them or (track is None and not add):
+        found = available()
+        if not found:
+            typer.echo(f"No benchmarks in {library_dir()}.")
+            typer.echo("Add one:  music benchmark <a record you trust>.wav --add <name>")
+            return
+        typer.echo("Benchmarks:")
+        for name, path in found.items():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            m = data.get("measures", {})
+            lufs, lra = m.get("integrated_lufs"), m.get("lra")
+            bits = []
+            if lufs is not None:
+                bits.append(f"{lufs:+.1f} LUFS")
+            if lra is not None:
+                bits.append(f"LRA {lra:.1f}")
+            typer.echo(f"  {name:<16} {', '.join(bits):<22} {data.get('note', '')[:44]}")
+        return
+
+    if not add:
+        _fail("--add <name> is required when adding. Use --list to see what exists.")
+
+    src = _audio_for(track, audio)
+    from music_studio.audio.analyze import AnalyzeError, analyze as _analyze
+    typer.echo(f"Analysing {src.name} …")
+    try:
+        data = _analyze(src)
+        dst = save(add, data, note, title or src.stem)
+    except (AnalyzeError, BenchmarkError) as exc:
+        _fail(str(exc))
+
+    _ok(f"Saved {dst}")
+    typer.echo(f"  music scope <your take> --against {add}")
 
 
 @app.command()

@@ -20,3 +20,5 @@ studio/.attic/
 *.key
 *.pem
 service-account*.json
+.coverage
+htmlcov/

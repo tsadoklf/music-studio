@@ -996,7 +996,7 @@ def analyze(path: Path, *, spectrogram_bins: int = SPECTROGRAM_BINS,
     # otherwise showed "No analysis yet" beside fully populated verdict cards.
     # Derived from the series already in `report`, so this costs no extra I/O.
     try:
-        from music_studio.insight.timeline import find_events
+        from music_studio.audio.timeline import find_events
         report["timeline"] = find_events(report)
     except Exception as exc:                          # noqa: BLE001
         log.debug("no timeline: %s", exc)

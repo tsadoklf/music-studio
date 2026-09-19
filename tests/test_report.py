@@ -9,7 +9,13 @@ for a codec-limited file, which is the wrong answer stated confidently.
 
 from __future__ import annotations
 
+import io
+import json
+import tempfile
 import unittest
+import unittest.mock
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from music_studio.insight import report
 
@@ -177,6 +183,246 @@ class TestSparseInput(unittest.TestCase):
         self.assertIsInstance(vs, list)
         report.human_report({})
         report.ai_report({})
+
+
+class TestClippingVerdict(unittest.TestCase):
+    """Clipping is reported only when it was actually detected. A count with
+    no detection flag is a measurement artefact, not a finding."""
+
+    def test_detected_clipping_is_a_warning_that_counts_it(self):
+        v = find(report.verdicts(analysis(
+            clipping={"clipping_suspected": True, "clipped_samples": 412,
+                      "runs": 7})), "clipping")
+        self.assertEqual(v["severity"], "warn")
+        self.assertIn("412", v["title"])
+        self.assertIn("7", v["title"])
+
+    def test_no_clipping_produces_no_finding(self):
+        """Silence is the right output. A green "no clipping" row is noise in
+        a list whose job is to be short."""
+        self.assertIsNone(find(report.verdicts(analysis()), "clipping"))
+
+    def test_a_count_without_the_detection_flag_is_not_reported(self):
+        v = find(report.verdicts(analysis(
+            clipping={"clipping_suspected": False, "clipped_samples": 3})),
+            "clipping")
+        self.assertIsNone(v)
+
+    def test_the_flag_without_a_count_is_not_reported_either(self):
+        v = find(report.verdicts(analysis(
+            clipping={"clipping_suspected": True, "clipped_samples": 0})),
+            "clipping")
+        self.assertIsNone(v)
+
+
+class TestDynamicsVerdict(unittest.TestCase):
+    """The one verdict that deliberately refuses to decide.
+
+    A low loudness range means over-compression on a dense mix and nothing at
+    all on a sparse one, and no number distinguishes them. Saying so is the
+    honest output; picking one would be wrong half the time."""
+
+    def test_a_narrow_range_warns(self):
+        v = find(report.verdicts(analysis(measures={"lra": 3.0})), "dynamics")
+        self.assertEqual(v["severity"], "warn")
+        self.assertIn("narrow", v["title"])
+
+    def test_it_declines_to_say_which_cause_it_is(self):
+        v = find(report.verdicts(analysis(measures={"lra": 3.0})), "dynamics")
+        self.assertIn("sparse", v["detail"])
+        self.assertIn("Listen", v["action"])
+
+    def test_a_healthy_range_is_ok(self):
+        v = find(report.verdicts(analysis(measures={"lra": 7.0})), "dynamics")
+        self.assertEqual(v["severity"], "ok")
+
+    def test_four_lu_is_the_boundary_and_reads_as_healthy(self):
+        self.assertEqual(
+            find(report.verdicts(analysis(measures={"lra": 4.0})),
+                 "dynamics")["severity"], "ok")
+
+    def test_the_crest_factor_is_quoted_when_it_is_known(self):
+        """It is the second number an engineer looks at, and the LRA alone
+        does not distinguish a limited master from a quiet one."""
+        v = find(report.verdicts(analysis(
+            measures={"lra": 3.0, "crest_factor": 6.2})), "dynamics")
+        self.assertIn("6.2", v["detail"])
+
+    def test_a_missing_crest_factor_does_not_break_the_sentence(self):
+        a = analysis()
+        a["measures"] = {"lra": 3.0}
+        v = find(report.verdicts(a), "dynamics")
+        self.assertNotIn("None", v["detail"])
+
+    def test_no_lra_produces_no_finding(self):
+        a = analysis()
+        a["measures"] = {"integrated_lufs": -14.0}
+        self.assertIsNone(find(report.verdicts(a), "dynamics"))
+
+
+class TestWideStereoVerdict(unittest.TestCase):
+    def test_a_very_wide_image_warns_without_calling_it_broken(self):
+        """Between 0 and 0.3 is wide, not out of phase. Calling it bad would
+        send someone hunting for an inverted channel that is not there."""
+        v = find(report.verdicts(analysis(stereo={"correlation": 0.1})), "stereo")
+        self.assertEqual(v["severity"], "warn")
+        self.assertIn("wide", v["title"])
+
+    def test_the_boundary_at_point_three_reads_as_normal(self):
+        self.assertEqual(
+            find(report.verdicts(analysis(stereo={"correlation": 0.3})),
+                 "stereo")["severity"], "ok")
+
+    def test_no_correlation_produces_no_finding(self):
+        a = analysis()
+        a["stereo"] = {}
+        self.assertIsNone(find(report.verdicts(a), "stereo"))
+
+
+class TestFormatting(unittest.TestCase):
+    """The number formatter. Levels keep their sign because the sign is the
+    information; spans are magnitudes and a leading plus on them is noise."""
+
+    def test_a_level_keeps_its_sign(self):
+        self.assertEqual(report._n(-12.2), "-12.2")
+        self.assertEqual(report._n(0.54, places=2), "+0.54")
+
+    def test_a_span_is_printed_unsigned(self):
+        self.assertEqual(report._n(6.4, signed=False), "6.4")
+
+    def test_a_missing_number_is_a_dash_not_a_zero(self):
+        """0.0 dBTP is a real and alarming measurement; "not measured" must
+        not be able to look like it."""
+        self.assertEqual(report._n(None), "—")
+
+    def test_a_non_numeric_value_is_passed_through_as_text(self):
+        """Some fields carry a verdict string where a number is expected;
+        formatting it with %f would raise mid-report."""
+        self.assertEqual(report._n("n/a"), "n/a")
+
+    def test_a_duration_is_minutes_and_seconds(self):
+        self.assertEqual(report._dur(245), "4:05")
+
+    def test_duration_seconds_are_always_two_digits(self):
+        self.assertEqual(report._dur(244.6), "4:05")
+
+    def test_a_missing_duration_is_a_dash(self):
+        self.assertEqual(report._dur(None), "—")
+        self.assertEqual(report._dur(0), "—")
+
+
+class TestWriteReports(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_both_reports_are_written(self):
+        out = report.write_reports(analysis(), self.tmp)
+        self.assertTrue(out["human"].is_file())
+        self.assertTrue(out["ai"].is_file())
+        self.assertEqual(out["human"].name, "REPORT.md")
+        self.assertEqual(out["ai"].name, "report.ai.md")
+
+    def test_the_directory_is_created(self):
+        deep = self.tmp / "a" / "b"
+        report.write_reports(analysis(), deep)
+        self.assertTrue(deep.is_dir())
+
+    def test_a_stem_prefixes_both_names(self):
+        """Two takes analysed into one directory would otherwise overwrite
+        each other's reports."""
+        out = report.write_reports(analysis(), self.tmp, stem="take-01")
+        self.assertEqual(out["human"].name, "take-01.REPORT.md")
+        self.assertEqual(out["ai"].name, "take-01.report.ai.md")
+
+    def test_the_files_hold_the_reports_themselves(self):
+        out = report.write_reports(analysis(), self.tmp)
+        self.assertEqual(out["human"].read_text(encoding="utf-8"),
+                         report.human_report(analysis()))
+
+    def test_advice_is_folded_into_both(self):
+        out = report.write_reports(analysis(), self.tmp,
+                                   advice="Lower the ceiling to -1.5.")
+        self.assertIn("Lower the ceiling", out["human"].read_text(encoding="utf-8"))
+
+
+class TestMain(unittest.TestCase):
+    """The CLI. studio_run.py calls it, and the browser reads what it writes."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        quiet = unittest.mock.patch.object(report.log, "error")
+        quiet.start()
+        self.addCleanup(quiet.stop)
+
+    def _file(self, data=None) -> Path:
+        p = self.tmp / "analysis.json"
+        p.write_text(json.dumps(data if data is not None else analysis()))
+        return p
+
+    def test_both_kinds_are_written_by_default(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = report.main(["--analysis", str(self._file())])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.tmp / "REPORT.md").is_file())
+        self.assertTrue((self.tmp / "report.ai.md").is_file())
+
+    def test_they_land_beside_the_analysis_by_default(self):
+        """So `music studio` leaves one directory holding everything about
+        one take."""
+        with redirect_stdout(io.StringIO()):
+            report.main(["--analysis", str(self._file())])
+        self.assertTrue((self.tmp / "REPORT.md").is_file())
+
+    def test_an_out_dir_overrides_that(self):
+        elsewhere = self.tmp / "reports"
+        with redirect_stdout(io.StringIO()):
+            report.main(["--analysis", str(self._file()),
+                         "--out-dir", str(elsewhere)])
+        self.assertTrue((elsewhere / "REPORT.md").is_file())
+
+    def test_kind_human_prints_and_writes_nothing(self):
+        """The inspection path: reading a report should not leave files
+        behind in the take directory."""
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = report.main(["--analysis", str(self._file()), "--kind", "human"])
+        self.assertEqual(rc, 0)
+        self.assertIn("#", buf.getvalue())
+        self.assertFalse((self.tmp / "REPORT.md").exists())
+
+    def test_kind_ai_prints_the_agent_report(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            report.main(["--analysis", str(self._file()), "--kind", "ai"])
+        self.assertIn("codec", buf.getvalue().lower())
+        self.assertFalse((self.tmp / "report.ai.md").exists())
+
+    def test_the_stem_reaches_the_filenames(self):
+        with redirect_stdout(io.StringIO()):
+            report.main(["--analysis", str(self._file()), "--stem", "take-02"])
+        self.assertTrue((self.tmp / "take-02.REPORT.md").is_file())
+
+    def test_advice_is_folded_in(self):
+        with redirect_stdout(io.StringIO()):
+            report.main(["--analysis", str(self._file()),
+                         "--advice", "Re-master at -16."])
+        self.assertIn("Re-master at -16.",
+                      (self.tmp / "REPORT.md").read_text(encoding="utf-8"))
+
+    def test_it_prints_where_each_file_went(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            report.main(["--analysis", str(self._file())])
+        self.assertIn("REPORT.md", buf.getvalue())
+        self.assertIn("report.ai.md", buf.getvalue())
+
+    def test_a_missing_analysis_is_an_exit_code_not_a_traceback(self):
+        self.assertEqual(report.main(["--analysis", str(self.tmp / "no.json")]), 1)
 
 
 if __name__ == "__main__":

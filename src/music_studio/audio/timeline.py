@@ -320,26 +320,3 @@ def _tidy(items: list[dict], target: float = -14.0) -> list[dict]:
     for m in merged:
         m["time"] = _fmt(m["time_s"])
     return merged
-
-
-# --------------------------------------------------------------------------
-# optional commentary
-# --------------------------------------------------------------------------
-
-COMMENT_SYSTEM = """\
-You are a mastering engineer annotating a timeline of one track. You are given \
-dated findings, each already measured. Write one short sentence per finding \
-saying what it means for the record — what a listener would notice, or what to \
-do about it.
-
-Rules:
-  * Never contradict a number you are given, and never invent one.
-  * You cannot hear the audio. Do not describe instruments, arrangement or mood.
-  * A codec cutoff cannot be undone with EQ. Never suggest it.
-  * Be specific and brief. One sentence. No preamble, no restating the title.
-
-Return JSON: a list of objects {"time_s": <the same value>, "comment": "..."} \
-in the same order, and nothing else.\
-"""
-
-

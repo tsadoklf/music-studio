@@ -67,6 +67,22 @@ page loads nothing at all. Classic `<script>` tags have no such restriction. Tha
 constraint is the whole reason for the IIFE-plus-namespace arrangement above: it is
 what ES modules would have given for free, done with what `file://` actually allows.
 
+## studio.js is now five files too
+
+It was 5,591 lines until 2026-09-19, when it became `studio-core.js` (helpers,
+VU ballistics, loudness), `studio-draw.js`, `studio-engine.js`,
+`studio-verdicts.js`, and `studio.js` holding the wiring. They load in that
+order, before this directory.
+
+Two measurements made that tractable after three failed attempts. **`studio.js`
+writes function bodies UNINDENTED**, so `const s` at column 0 is usually a
+local — a line-based scan reports 228 top-level declarations where there are
+75, and any sed-driven tool built on indentation corrupts the file. And only 31
+declarations are referenced outside their own section, flowing one way.
+
+`tests/test_web_assets.py` (Python, in the main suite) now fails if two scripts
+declare the same top-level name, which is the failure described below.
+
 ## Why the IIFEs, and why they cannot be dropped
 
 `studio.js` is **not** wrapped in an IIFE — it declares `clamp`, `lerp`, `INFERNO`,

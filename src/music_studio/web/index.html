@@ -333,6 +333,19 @@
 <input type="file" id="audio-input" accept="audio/*,.wav,.mp3,.m4a,.flac,.aiff">
 <input type="file" id="json-input" accept="application/json,.json">
 
+<!-- The studio itself. Five classic scripts, loaded in dependency order:
+     helpers first, then drawing, the audio engine, the verdicts, and finally
+     the wiring, which boots the page and so must come last. Each file is its
+     own IIFE over window.__studio; see README.md for why this is not an ES
+     module and why the IIFEs cannot be dropped.
+
+     studio.js keeps its name and stays the LAST of the five: cli.py injects
+     the preloaded analysis immediately before this tag, and boot() must not
+     run until that global is set. -->
+<script src="studio-core.js"></script>
+<script src="studio-draw.js"></script>
+<script src="studio-engine.js"></script>
+<script src="studio-verdicts.js"></script>
 <script src="studio.js"></script>
 <!-- The meter bank. Ten classic scripts, loaded in dependency order: core
      first, the two controls and the filter maths next, then the five meters,

@@ -929,7 +929,7 @@ class TestNew(_Tmp):
         tpl = self.tmp / "song-template.md"
         tpl.write_text("slug: <kebab-case-folder-name>\n"
                        "title: <Display title, accents and all>\n"
-                       "channel: <le-bal-musette | camille-marceau>\n"
+                       "channel: <channel-slug>\n"
                        "created: <YYYY-MM-DD>\n", encoding="utf-8")
         result = runner.invoke(app, ["new", "le-vieux-port",
                                      "--channel", "le-bal-musette",

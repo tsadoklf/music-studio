@@ -22,3 +22,10 @@ studio/.attic/
 service-account*.json
 .coverage
 htmlcov/
+
+# Build artefacts. `pip install .` leaves these behind; they are copies of
+# src/ and go stale the moment anything changes, so a committed one is a
+# second, wrong version of the package sitting in the tree.
+build/
+dist/
+*.egg-info/

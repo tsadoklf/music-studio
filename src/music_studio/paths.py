@@ -49,16 +49,36 @@ def page() -> Path:
     return web_dir() / "index.html"
 
 
-def song_template() -> Path | None:
-    """The scaffold `music new` copies, or None when it is not installed.
+def templates_dir() -> Path:
+    """Where the scaffolds `music new` copies live.
 
-    None rather than a missing path: the caller already degrades to a stub and
-    warns, and handing back a path that does not exist only moves the check.
+    A directory rather than one file, so adding a template is dropping a `.md`
+    in it — there is no registry to update and nothing to keep in step.
+    """
+    override = os.environ.get("MUSIC_STUDIO_TEMPLATES")
+    return Path(override).expanduser().resolve() if override else root() / "templates"
+
+
+def templates() -> dict[str, Path]:
+    """Every installed template, by name. `song.md` is `song`."""
+    d = templates_dir()
+    if not d.is_dir():
+        return {}
+    return {p.stem: p for p in sorted(d.glob("*.md"))
+            if p.name.lower() != "readme.md"}
+
+
+def song_template(name: str = "song") -> Path | None:
+    """One scaffold by name, or None when it is not installed.
+
+    None rather than a missing path: the caller degrades to a stub and warns,
+    and handing back a path that does not exist only moves the check to it.
     """
     override = os.environ.get("MUSIC_STUDIO_TEMPLATE")
-    candidate = (Path(override).expanduser() if override
-                 else root() / "song-template.md")
-    return candidate if candidate.is_file() else None
+    if override:
+        candidate = Path(override).expanduser()
+        return candidate if candidate.is_file() else None
+    return templates().get(name)
 
 
 # Where each runnable module lives, now that they are in sub-packages.

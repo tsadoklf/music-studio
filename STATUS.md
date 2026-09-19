@@ -33,7 +33,7 @@ python3.12 -m venv .venv && ./.venv/bin/pip install -e .   # first time
 ./.venv/bin/music studio <file.wav>                    # measure + report, one step
 ./.venv/bin/music serve <audio-dir>                    # the page, on 127.0.0.1:8770
 ./.venv/bin/music maximize <file> --preset loud        # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 686 tests, 90% covered
+./.venv/bin/python -m unittest discover -s tests -t .  # 789 tests, 94% covered
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -58,7 +58,8 @@ then, which it says on screen.
 | `insight/eqchat.py` | Plain language → equaliser bands. Returns data, never commands. |
 | `audio/compare.py` | Null test: hear exactly what processing changed. |
 | `insight/studio_run.py` | Analyse + report + advise in one call. What the page's button runs. |
-| `paths.py` | Where the page, the template, the .env and the scripts are. Asked once, never recomputed. |
+| `paths.py` | Where the page, the templates, the .env and the scripts are. Asked once, never recomputed. |
+| `templates/` | Scaffolds `music new` copies. A directory, so adding one is dropping a `.md` in it. |
 | `serve/http.py` | Loopback HTTP server. What turns a click in the page into a process. |
 | `serve/mcp.py` | The same commands as MCP tools, for an agent. Generated from serve.py's table. |
 | `studio/widgets/maximizer.js` | The suite's panel: live preview, GR meters, and the command that renders it. |
@@ -116,7 +117,7 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 686 tests total, all passing. Coverage 90%.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 789 tests total, all passing. Coverage 94%.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -157,12 +158,11 @@ taken from the live page, which is weaker than a test but stronger than a claim:
 
 ### Known broken
 
-- **`music check` and `music publish` raise `ModuleNotFoundError`.**
-  `ytpublish.py` does not exist. The pipeline can measure, master, report and
-  render video — it **cannot publish**. This is the largest hole.
-- **`song-template.md` is not installed.** `music new` asks `paths.song_template()`
-  for it and gets `None`, so it degrades to a stub and warns. Either vendor the
-  file or drop the command's dependency on it.
+- **`music check` and `music publish` cannot work.** `ytpublish.py` has never
+  been written. Both commands now exit with a sentence saying so and naming
+  what does work, rather than the raw traceback they used to produce — but the
+  hole is unchanged: this pipeline can measure, master, report and render
+  video, and it **cannot publish**. That is the largest gap left.
 
 ### Not verified by anyone
 
@@ -303,7 +303,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from the repo root. 686, all passing, 90% covered. Keep it that way.
+  from the repo root. 789, all passing, 94% covered. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on

@@ -33,7 +33,7 @@ python3.12 -m venv .venv && ./.venv/bin/pip install -e .   # first time
 ./.venv/bin/music studio <file.wav>                    # measure + report, one step
 ./.venv/bin/music serve <audio-dir>                    # the page, on 127.0.0.1:8770
 ./.venv/bin/music maximize <file> --preset loud        # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 255 tests
+./.venv/bin/python -m unittest discover -s tests -t .  # 382 tests
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -51,7 +51,8 @@ then, which it says on screen.
 | `audio/master.py` | Two-pass EBU R128 loudness + true peak, and the `--eq` presets. |
 | `audio/maximize.py` | Compressor, stereo imager, maximizer, soft clip — an MClass-style suite. |
 | `audio/tempo.py` | Tempo, metre and key estimation, each with a confidence. |
-| `insight/timeline.py` | Dated findings — where it clips, peaks, runs off target. |
+| `audio/timeline.py` | Dated findings — where it clips, peaks, runs off target. Pure. |
+| `insight/timeline.py` | A sentence of commentary per finding, from a model. |
 | `insight/report.py` | Verdicts → `REPORT.md` (for a person) and `report.ai.md` (for an agent). |
 | `insight/advise.py` | Asks a model what the measurements mean. Recommends; never runs. |
 | `insight/eqchat.py` | Plain language → equaliser bands. Returns data, never commands. |
@@ -115,7 +116,7 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 255 tests total, all passing.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 382 tests total, all passing.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -236,16 +237,23 @@ the case; this is the index.
     0.5/0.1 input into 0.525/0.075 at width 1, i.e. widened the signal while
     claiming to do nothing. Each gain is its own node, and the offline check
     asserts 0/1/2 → mono / transparent / doubled.
-13. **Each equaliser owns its own band list.** `window.StudioEq` is the first
+13. **`audio/` must not import `insight/`.** Measurement cannot depend on
+    interpretation: `insight/` is the only half that needs an API key and a
+    network, so an import in that direction means a missing key stops the
+    meters. The rule lived in a docstring and was false within a day —
+    `analyze.py` imported `insight.timeline` for findings that were pure
+    arithmetic all along. `tests/test_architecture.py` parses the package with
+    `ast` and fails on a violation, including one hidden inside a function.
+14. **Each equaliser owns its own band list.** `window.StudioEq` is the first
     panel's, `window.StudioEq2` is the second's, and neither may write the
     other. They are separate devices that cascade — a single shared list would
     make each panel overwrite the other's knob on its next publish, which
     looks like a knob that will not stay put rather than like a bug.
-14. **Only the first equaliser trims.** Auto gain compensation is computed for
+15. **Only the first equaliser trims.** Auto gain compensation is computed for
     the whole monitor path and applied once, before EQ 1's filters. A second
     trim on EQ 2 would attenuate twice and deliver a monitor quieter than the
     source, which reads as "the second EQ sounds wrong".
-15. **The rack is a router of `{input, output}` blocks.** A device that is not
+16. **The rack is a router of `{input, output}` blocks.** A device that is not
     patched is absent from the graph, not bypassed inside it. Keep new devices
     as blocks so back-panel cabling stays a change to the router alone.
 
@@ -286,7 +294,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from the repo root. 255, all passing. Keep it that way.
+  from the repo root. 382, all passing. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on

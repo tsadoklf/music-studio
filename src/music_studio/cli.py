@@ -72,6 +72,43 @@ def _track_dir(track: Path) -> Path:
     return track.parent if track.is_file() else track
 
 
+def _audio_for(target: Path, audio: Path | None) -> Path:
+    """Resolve what the user meant by `target` into one audio file.
+
+    A track directory, a song.md, or the audio itself — `studio` and `scope`
+    both accept all three and both used to work it out inline, with wording
+    that had already drifted apart between them.
+
+    One behaviour is DELIBERATELY unified rather than preserved: a `.json`
+    target. `studio` treated it as a track directory and looked for
+    masters/master.wav beside it; `scope` treated it as audio and would have
+    handed analysis.json to the decoder. Studio's reading is the sensible one
+    — nobody means "analyse this JSON as audio" — so both take it now.
+    """
+    if target.is_file() and target.suffix.lower() not in (".md", ".json"):
+        return target
+    src = audio or (_track_dir(target) / "masters" / "master.wav")
+    if not src.is_file():
+        _fail(f"No audio at {src}. Pass a file, or --audio.")
+    return src
+
+
+def _print_verdicts(vs: list[dict], line: str) -> None:
+    """The verdict block, in colour. Severity decides the colour once here
+    rather than in each command that shows one."""
+    worst = (typer.colors.RED if any(v["severity"] == "bad" for v in vs)
+             else typer.colors.YELLOW if any(v["severity"] == "warn" for v in vs)
+             else typer.colors.GREEN)
+    typer.echo("")
+    typer.secho(f"  {line}", bold=True, fg=worst)
+    for v in vs:
+        mark = {"bad": "✗", "warn": "!", "ok": "✓"}[v["severity"]]
+        colour = {"bad": typer.colors.RED, "warn": typer.colors.YELLOW,
+                  "ok": typer.colors.GREEN}[v["severity"]]
+        typer.secho(f"  {mark} {v['title']}", fg=colour)
+    typer.echo("")
+
+
 def _fail(message: str) -> None:
     typer.secho(f"error: {message}", fg=typer.colors.RED, err=True)
     raise typer.Exit(1)
@@ -147,7 +184,15 @@ def check(
     track: Path = typer.Argument(..., help="Track directory or song.md."),
 ) -> None:
     """Validate a song file's publishing metadata without touching YouTube."""
-    from ytpublish import PublishError, parse_song
+    try:
+        from ytpublish import PublishError, parse_song   # type: ignore[import-not-found]
+    except ModuleNotFoundError:
+        # A bare traceback is the wrong answer to "why did this not work".
+        # The module is absent by omission, not by a broken install, and
+        # saying so is the difference between a hole and a bug.
+        _fail("YouTube publishing is not available: the ytpublish module has never been written. "
+        "Everything else works — measure, master, maximize, compare, video. "
+        "See STATUS.md, 'Known broken'.")
 
     song = _song_file(track)
     try:
@@ -201,58 +246,28 @@ def studio(
     """
     import webbrowser
 
-    from music_studio.audio.analyze import AnalyzeError, analyze as _analyze
-    from music_studio.insight.report import write_reports
+    from music_studio.audio.analyze import AnalyzeError
+    from music_studio.insight.studio_run import run as _run
 
     _setup_logging(verbose)
 
-    if target.is_file() and target.suffix.lower() not in (".md", ".json"):
-        src = target
-    else:
-        tdir = _track_dir(target)
-        src = audio or (tdir / "masters" / "master.wav")
-        if not src.is_file():
-            _fail(f"No audio at {src}. Pass a file, or --audio.")
-
+    src = _audio_for(target, audio)
     dest = out_dir or src.parent
-    dest.mkdir(parents=True, exist_ok=True)
 
     typer.echo(f"Analysing {src.name} …")
     try:
-        report_data = _analyze(src)
+        # The sequence lives in studio_run.run(), which the page's button and
+        # the server call too. Duplicating it here is how the CLI and the page
+        # came to write different things from the same click.
+        result = _run(src, dest, advice=not no_advice)
     except AnalyzeError as exc:
         _fail(str(exc))
 
-    analysis_path = dest / "analysis.json"
-    analysis_path.write_text(json.dumps(report_data, separators=(",", ":")), encoding="utf-8")
+    analysis_path = Path(result["files"]["analysis"])
 
-    advice = None
-    if not no_advice:
-        from music_studio.insight.advise import DEFAULT_MODEL, AdviseError, advise as _advise
-        try:
-            advice = _advise(report_data, None, DEFAULT_MODEL)
-        except AdviseError as exc:
-            typer.secho(f"  (no advice: {exc})", fg=typer.colors.YELLOW, err=True)
-
-    written = write_reports(report_data, dest, advice)
-
-    # The verdict, in the terminal, without opening anything.
-    from music_studio.insight.report import headline, verdicts as _verdicts
-    vs = _verdicts(report_data)
-    typer.echo("")
-    typer.secho(f"  {headline(vs)}", bold=True,
-                fg=typer.colors.RED if any(v["severity"] == "bad" for v in vs)
-                else typer.colors.YELLOW if any(v["severity"] == "warn" for v in vs)
-                else typer.colors.GREEN)
-    for v in vs:
-        mark = {"bad": "✗", "warn": "!", "ok": "✓"}[v["severity"]]
-        colour = {"bad": typer.colors.RED, "warn": typer.colors.YELLOW,
-                  "ok": typer.colors.GREEN}[v["severity"]]
-        typer.secho(f"  {mark} {v['title']}", fg=colour)
-    typer.echo("")
-    _ok(f"  {analysis_path}")
-    _ok(f"  {written['human']}")
-    _ok(f"  {written['ai']}")
+    _print_verdicts(result["verdicts"], result["headline"])
+    for key in ("analysis", "human", "ai"):
+        _ok(f"  {result['files'][key]}")
 
     if serve_it:
         from music_studio.serve.http import ServeError, serve as _serve
@@ -266,7 +281,11 @@ def studio(
         page = paths.page()
         if not page.is_file():
             _fail(f"No studio page at {page}.")
-        launcher = _write_launcher(page, report_data, src.name, advice, analysis_path)
+        # Read back only here. The analysis runs to megabytes and only the
+        # launcher needs it in memory — --serve returns above without it.
+        report_data = json.loads(analysis_path.read_text(encoding="utf-8"))
+        launcher = _write_launcher(page, report_data, src.name,
+                                   result["advice"], analysis_path)
         webbrowser.open(launcher.as_uri())
 
 
@@ -433,13 +452,13 @@ def scope(
 
     _setup_logging(verbose)
 
-    if track.is_file() and track.suffix.lower() != ".md":
-        src, tdir = track, track.parent
-    else:
-        tdir = _track_dir(track)
-        src = audio or (tdir / "masters" / "master.wav")
-        if not src.is_file():
-            _fail(f"No audio at {src}. Run `music master` first, or pass --audio.")
+    src = _audio_for(track, audio)
+
+    # Where analysis.json goes by default. NOT src.parent: given a track
+    # directory the audio is at masters/master.wav, and the analysis belongs
+    # at the track root beside song.md, not buried with the audio.
+    tdir = src.parent if track.is_file() and track.suffix.lower() != ".md" \
+        else _track_dir(track)
 
     dst = out or (tdir / "analysis.json")
     try:
@@ -615,7 +634,12 @@ def publish(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Upload to YouTube, or push edited metadata to an existing video."""
-    import ytpublish
+    try:
+        import ytpublish   # type: ignore[import-not-found]
+    except ModuleNotFoundError:
+        _fail("YouTube publishing is not available: the ytpublish module has never been written. "
+        "Everything else works — measure, master, maximize, compare, video. "
+        "See STATUS.md, 'Known broken'.")
 
     song = _song_file(track)
     argv = ["--song", str(song), "--secrets", str(secrets), "--token", str(token)]

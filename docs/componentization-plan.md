@@ -218,7 +218,26 @@ move or an import line, it belongs in another phase.
 Rename only where the package makes the old name redundant:
 `serve.py → serve/http.py`, `mcp_server.py → serve/mcp.py`, `music.py → cli.py`.
 
-### Phase 3 — the CLI gets thin
+### Phase 3 — the CLI gets thin — **DONE**
+
+Shipped in #5, and the survey was wrong about what was in there. `cli.py` held
+almost no ffmpeg or measurement logic — it was 351 statements of Typer wiring
+and terminal formatting, which is what a CLI is for. The real duplication was
+that `music studio` reimplemented `studio_run.py`'s whole sequence inline,
+because `studio_run` only had a `main(argv)` and its orchestration was trapped
+inside argparse handling.
+
+So `run()` was extracted and the CLI calls it. A side effect that proves the
+point: `music studio` now writes `timeline.json`, which it had silently never
+done, because only the other copy of the sequence built one.
+
+`_audio_for()` and `_print_verdicts()` absorbed the rest of the duplication
+between `studio` and `scope`.
+
+The original description follows, for the record.
+
+---
+
 
 `music.py` is 672 lines and the second-largest module. Some of that is
 argument wiring, which is what a CLI is for; some is logic that belongs in the
@@ -226,7 +245,30 @@ module the command drives. Move the logic down, leave the wiring.
 
 Target: `cli.py` contains no ffmpeg invocation and no measurement maths.
 
-### Phase 4 — the three soft couplings
+### Phase 4 — the layering rule becomes true — **DONE**
+
+Shipped in #5. The plan expected to move constants around; what it actually
+found was that `audio/__init__.py`'s one-way rule was FALSE — `analyze.py`
+imported `insight.timeline` to embed dated findings.
+
+The findings turned out to be pure arithmetic over the analysis dict, sitting
+on the wrong side of the line. `find_events` and its helpers moved to
+`audio/timeline.py`; `add_comments`, the one function that calls a model,
+stayed in `insight/timeline.py` and imports the pure half.
+
+`tests/test_architecture.py` now parses the package with `ast` and fails if
+`audio/` imports `insight/` or `serve/`, or reaches the network — an import
+inside a function body is still a dependency, and that is exactly where this
+one was hiding. Verified by reintroducing the violation and watching it fail.
+
+The constants (`DEFAULT_LUFS`, `BANDS`) turned out not to need moving: both
+now sit inside `audio/` alongside their only consumers, so the cross-package
+coupling the plan predicted does not exist.
+
+The original description follows, for the record.
+
+---
+
 
 - `DEFAULT_LUFS` / `DEFAULT_TP` move to a `targets` module both `master` and
   `analyze` import. Invariant 10 says these live in one place and travel in
@@ -294,6 +336,6 @@ tests and visible only on screen.
 | 0 | API key lookup no longer walks into a sibling repo | **done** (#2) |
 | 1 | `paths.py`; `song-template.md` settled | **done** (#3) |
 | 2 | `src/` layout, `pyproject.toml`, `music` entry point | **done** (#4) |
-| 3 | thin `cli.py` | not started |
-| 4 | shared constants; `audio/` stops importing `insight/` | not started |
+| 3 | thin `cli.py` | **done** (#5) |
+| 4 | `audio/` stops importing `insight/` | **done** (#5) |
 | 5 | split `studio.js` | not started |

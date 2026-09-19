@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import unittest
 
+from music_studio.audio import timeline as pure
 from music_studio.insight import timeline
 
 
@@ -57,9 +58,9 @@ class TestBasicShape(unittest.TestCase):
                          sorted(i["time_s"] for i in items))
 
     def test_timestamps_are_formatted_as_minutes_and_seconds(self):
-        self.assertEqual(timeline._fmt(0), "0:00")
-        self.assertEqual(timeline._fmt(67.4), "1:07")
-        self.assertEqual(timeline._fmt(404.4), "6:44")
+        self.assertEqual(pure._fmt(0), "0:00")
+        self.assertEqual(pure._fmt(67.4), "1:07")
+        self.assertEqual(pure._fmt(404.4), "6:44")
 
 
 class TestEmptyAndSparse(unittest.TestCase):
@@ -88,7 +89,7 @@ class TestBreaches(unittest.TestCase):
         items = timeline.build(analysis(series(block * 8)))
         breaches = [i for i in items if "above target" in i["title"]]
         summary = [i for i in items if "sections run off target" in i["title"]]
-        self.assertLessEqual(len(breaches), timeline.MAX_PER_KIND)
+        self.assertLessEqual(len(breaches), pure.MAX_PER_KIND)
         self.assertEqual(len(summary), 1)
 
     def test_the_kept_breaches_are_the_furthest_from_target(self):

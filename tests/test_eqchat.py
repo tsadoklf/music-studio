@@ -9,11 +9,23 @@ reach a BiquadFilterNode, however confidently it was returned.
 The prompt's domain knowledge is also pinned. The mapping from "hum" to a narrow
 notch, and the rule that a codec cutoff cannot be EQ'd back, are the difference
 between an equaliser that helps and one that confidently makes things worse.
+
+The classes at the bottom do exercise interpret(), with `urlopen` patched — a
+model that returns prose, a fenced code block, or nothing at all are all shapes
+this has actually seen, and each has to end as a readable message rather than a
+traceback in the studio panel.
 """
 
 from __future__ import annotations
 
+import io
+import json
+import tempfile
 import unittest
+import unittest.mock
+import urllib.error
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from music_studio.insight import eqchat
 
@@ -155,6 +167,292 @@ class TestErrors(unittest.TestCase):
             advise._load_env_key = saved
             if original is not None:
                 eqchat.__dict__["_load_env_key"] = original
+
+
+# --------------------------------------------------------------------------
+# the call
+# --------------------------------------------------------------------------
+
+class _FakeResponse(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+        return False
+
+
+def _reply(content) -> _FakeResponse:
+    """A model reply whose message content is `content` (a dict is serialised)."""
+    if not isinstance(content, str):
+        content = json.dumps(content)
+    return _FakeResponse(json.dumps(
+        {"choices": [{"message": {"content": content}}]}).encode("utf-8"))
+
+
+class _Interpret(unittest.TestCase):
+    def setUp(self):
+        from music_studio.insight import advise
+        key = unittest.mock.patch.object(advise, "_load_env_key",
+                                         return_value="sk-test")
+        key.start()
+        self.addCleanup(key.stop)
+
+    def interpret(self, content, ask="brighten it", **kw):
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 return_value=_reply(content)) as opened:
+            out = eqchat.interpret(ask, **kw)
+        self.request = opened.call_args[0][0]
+        self.body = json.loads(self.request.data.decode("utf-8"))
+        return out
+
+
+class TestRequestShape(_Interpret):
+    def test_json_mode_is_requested(self):
+        """The reply is parsed as JSON before it is validated. Asking for
+        json_object is what keeps the model from wrapping it in an apology."""
+        self.interpret({"bands": [], "summary": ""})
+        self.assertEqual(self.body["response_format"], {"type": "json_object"})
+
+    def test_the_temperature_is_near_zero(self):
+        """"Brighten it" twice should move the same band the same way; an EQ
+        that wanders between identical requests cannot be reasoned with."""
+        self.interpret({"bands": [], "summary": ""})
+        self.assertLessEqual(self.body["temperature"], 0.2)
+
+    def test_the_current_bands_are_sent_so_more_can_mean_more(self):
+        """Without the current state every request starts from flat, and
+        "a bit more" undoes the move it was meant to extend."""
+        self.interpret({"bands": [], "summary": ""},
+                       bands=[{"type": "highshelf", "freq": 10000,
+                               "gain": 2.0, "q": 0.7}])
+        user = self.body["messages"][1]["content"]
+        self.assertIn("highshelf", user)
+        self.assertIn("10000", user)
+
+    def test_the_request_is_carried_verbatim(self):
+        self.interpret({"bands": [], "summary": ""}, ask="less boxy please")
+        self.assertIn("less boxy please", self.body["messages"][1]["content"])
+
+    def test_the_key_travels_in_the_header_not_the_body(self):
+        self.interpret({"bands": [], "summary": ""})
+        self.assertEqual(self.request.headers["Authorization"], "Bearer sk-test")
+        self.assertNotIn("sk-test", self.request.data.decode("utf-8"))
+
+    def test_a_timeout_is_set(self):
+        """Without one a stalled connection hangs the EQ panel with no way to
+        cancel from the page."""
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 return_value=_reply({"bands": []})) as opened:
+            eqchat.interpret("brighter")
+        self.assertEqual(opened.call_args[1]["timeout"], eqchat.TIMEOUT)
+
+    def test_the_model_can_be_overridden(self):
+        self.interpret({"bands": []}, model="some/other-model")
+        self.assertEqual(self.body["model"], "some/other-model")
+
+
+class TestReplyParsing(_Interpret):
+    """Everything between the model's text and the audio graph."""
+
+    def test_a_clean_reply_comes_back_validated(self):
+        out = self.interpret({
+            "bands": [{"type": "highshelf", "freq": 11000, "gain": 2.0, "q": 0.7}],
+            "summary": "a touch of air", "replace": False})
+        self.assertEqual(len(out["bands"]), 1)
+        self.assertEqual(out["summary"], "a touch of air")
+        self.assertFalse(out["replace"])
+
+    def test_a_fenced_block_is_unwrapped(self):
+        """Models fence JSON even when told not to, and the fence would make
+        json.loads fail on an otherwise perfect answer."""
+        out = self.interpret(
+            '```json\n{"bands": [{"type": "notch", "freq": 50, "q": 8}], '
+            '"summary": "hum"}\n```')
+        self.assertEqual(out["bands"][0]["freq"], 50.0)
+        self.assertEqual(out["summary"], "hum")
+
+    def test_a_bare_fence_is_unwrapped_too(self):
+        out = self.interpret('```\n{"bands": [], "summary": "nothing to do"}\n```')
+        self.assertEqual(out["summary"], "nothing to do")
+
+    def test_the_validator_is_applied_to_whatever_came_back(self):
+        """interpret() is the only path bands take into the studio, so the
+        limits have to be enforced here rather than left to the caller."""
+        out = self.interpret({"bands": [
+            {"type": "peaking", "freq": 3000, "gain": 40, "q": 1},
+            {"type": "telepathy", "freq": 3000, "gain": 3, "q": 1},
+        ]})
+        self.assertEqual(len(out["bands"]), 1)
+        self.assertEqual(out["bands"][0]["gain"], eqchat.GAIN_LIMIT)
+
+    def test_replace_is_coerced_to_a_real_boolean(self):
+        """It decides whether the existing chain survives. A truthy string
+        reaching the page as "false" would keep an EQ the user asked to clear."""
+        out = self.interpret({"bands": [], "replace": "yes"})
+        self.assertIs(out["replace"], True)
+
+    def test_a_missing_replace_defaults_to_adding(self):
+        """The safe direction: adding a band is undone by removing it;
+        replacing has already thrown the previous chain away."""
+        self.assertIs(self.interpret({"bands": []})["replace"], False)
+
+    def test_a_runaway_summary_is_bounded(self):
+        out = self.interpret({"bands": [], "summary": "x" * 5000})
+        self.assertLessEqual(len(out["summary"]), 400)
+
+    def test_prose_instead_of_json_is_a_readable_error(self):
+        """The most common model failure, and it must not surface as a
+        JSONDecodeError with no context."""
+        with self.assertRaises(eqchat.EqChatError) as c:
+            self.interpret("Sure! I'd be happy to help you brighten that up.")
+        self.assertIn("did not return JSON", str(c.exception))
+
+    def test_the_error_quotes_what_came_back(self):
+        """Otherwise there is nothing to debug from: the whole failure is what
+        the model said instead."""
+        with self.assertRaises(eqchat.EqChatError) as c:
+            self.interpret("I cannot do that")
+        self.assertIn("I cannot do that", str(c.exception))
+
+    def test_a_reply_with_no_choices_is_a_readable_error(self):
+        body = _FakeResponse(json.dumps({"error": {"message": "bad model"}}).encode())
+        with unittest.mock.patch("urllib.request.urlopen", return_value=body):
+            with self.assertRaises(eqchat.EqChatError) as c:
+                eqchat.interpret("brighter")
+        self.assertIn("Unexpected response shape", str(c.exception))
+
+
+class TestTransportFailures(_Interpret):
+    def test_an_http_error_reports_the_code(self):
+        err = urllib.error.HTTPError("https://openrouter.ai", 402, "nope", {},
+                                     io.BytesIO(b"insufficient credits"))
+        with unittest.mock.patch("urllib.request.urlopen", side_effect=err):
+            with self.assertRaises(eqchat.EqChatError) as c:
+                eqchat.interpret("brighter")
+        self.assertIn("402", str(c.exception))
+        self.assertIn("insufficient credits", str(c.exception))
+
+    def test_offline_says_so(self):
+        with unittest.mock.patch("urllib.request.urlopen",
+                                 side_effect=urllib.error.URLError("no route")):
+            with self.assertRaises(eqchat.EqChatError) as c:
+                eqchat.interpret("brighter")
+        self.assertIn("Could not reach OpenRouter", str(c.exception))
+
+
+class TestContextExtras(unittest.TestCase):
+    """_context is everything the model knows about the file. Each line either
+    changes the answer or should not be there."""
+
+    def test_loudness_is_stated_when_measured(self):
+        out = eqchat._context(None, {"measures": {"integrated_lufs": -12.2,
+                                                  "true_peak_dbtp": 0.54}})
+        self.assertIn("-12.2 LUFS", out)
+        self.assertIn("+0.54 dBTP", out)
+
+    def test_the_band_table_is_labelled_as_relative(self):
+        """Unlabelled, "air -68" reads as a verdict that the track is dull, and
+        the model reliably prescribes a shelf for it."""
+        out = eqchat._context(None, {"spectrum": {"bands": {"sub": -28.4,
+                                                            "air": -68.7}}})
+        self.assertIn("not a reference", out)
+        self.assertIn("air", out)
+
+    def test_an_analysis_with_no_measurements_adds_no_lines(self):
+        self.assertEqual(eqchat._context(None, {}), eqchat._context(None, None))
+
+
+class TestMain(unittest.TestCase):
+    """The CLI. serve.py runs it as a subprocess and parses stdout, so even a
+    failure has to print one JSON object."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        quiet = unittest.mock.patch.object(eqchat.log, "error")
+        quiet.start()
+        self.addCleanup(quiet.stop)
+
+    def _run(self, argv, result=None):
+        buf = io.StringIO()
+        with unittest.mock.patch.object(
+                eqchat, "interpret",
+                return_value=result or {"bands": [], "summary": "ok",
+                                        "replace": False}) as called, \
+                redirect_stdout(buf):
+            rc = eqchat.main(argv)
+        self.called = called
+        return rc, buf.getvalue()
+
+    def test_prints_one_json_object(self):
+        rc, out = self._run(["--ask", "brighter"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(out)["summary"], "ok")
+
+    def test_inline_bands_are_parsed_and_passed_on(self):
+        """The page holds its bands in memory, not on disk; --bands-json is the
+        only way they reach the model, and without them "more" means nothing."""
+        self._run(["--ask", "more", "--bands-json",
+                   '[{"type": "peaking", "freq": 3000, "gain": 2, "q": 1}]'])
+        self.assertEqual(self.called.call_args[0][1][0]["freq"], 3000)
+
+    def test_malformed_inline_bands_are_refused_with_json_on_stdout(self):
+        """A parse failure still has to be readable by the caller that is
+        parsing stdout, so it goes out as JSON rather than a traceback."""
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = eqchat.main(["--ask", "more", "--bands-json", "{not json"])
+        self.assertEqual(rc, 1)
+        payload = json.loads(buf.getvalue())
+        self.assertIn("not valid JSON", payload["error"])
+        self.assertEqual(payload["bands"], [])
+
+    def test_bands_are_read_from_a_file_when_given(self):
+        f = self.tmp / "bands.json"
+        f.write_text('[{"type": "lowshelf", "freq": 90, "gain": 1.5, "q": 0.7}]')
+        self._run(["--ask", "warmer", "--bands", str(f)])
+        self.assertEqual(self.called.call_args[0][1][0]["type"], "lowshelf")
+
+    def test_inline_bands_win_over_a_file(self):
+        """Both can be present — the page passes --bands-json while a stale
+        file sits beside the track. The live state is the correct one."""
+        f = self.tmp / "bands.json"
+        f.write_text('[{"type": "lowshelf", "freq": 90, "gain": 1.5, "q": 0.7}]')
+        self._run(["--ask", "x", "--bands", str(f), "--bands-json",
+                   '[{"type": "notch", "freq": 50, "gain": 0, "q": 8}]'])
+        self.assertEqual(self.called.call_args[0][1][0]["type"], "notch")
+
+    def test_a_missing_bands_file_is_not_an_error(self):
+        """A flat EQ has no file yet, and flat is the starting state."""
+        rc, _ = self._run(["--ask", "x", "--bands", str(self.tmp / "nope.json")])
+        self.assertEqual(rc, 0)
+        self.assertIsNone(self.called.call_args[0][1])
+
+    def test_an_analysis_is_loaded_for_context(self):
+        f = self.tmp / "analysis.json"
+        f.write_text(json.dumps({"codec": {"lossy_suspected": True,
+                                           "cutoff_hz": 15084.0}}))
+        self._run(["--ask", "brighter", "--analysis", str(f)])
+        self.assertTrue(self.called.call_args[0][2]["codec"]["lossy_suspected"])
+
+    def test_a_missing_analysis_is_not_an_error(self):
+        rc, _ = self._run(["--ask", "x", "--analysis", str(self.tmp / "nope.json")])
+        self.assertEqual(rc, 0)
+        self.assertIsNone(self.called.call_args[0][2])
+
+    def test_a_model_failure_still_prints_a_parseable_object(self):
+        buf = io.StringIO()
+        with unittest.mock.patch.object(
+                eqchat, "interpret",
+                side_effect=eqchat.EqChatError("OpenRouter returned 402")), \
+                redirect_stdout(buf):
+            rc = eqchat.main(["--ask", "brighter"])
+        self.assertEqual(rc, 1)
+        payload = json.loads(buf.getvalue())
+        self.assertIn("402", payload["error"])
+        self.assertEqual(payload["bands"], [])
 
 
 if __name__ == "__main__":

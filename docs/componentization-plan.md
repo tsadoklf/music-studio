@@ -281,7 +281,31 @@ The original description follows, for the record.
 After this, `audio/` imports nothing from `insight/` — the dependency runs one
 way, which is the property worth having.
 
-### Phase 5 — `studio.js` (a separate piece of work)
+### Phase 5 — `studio.js` — **DONE**
+
+Shipped in #6. 5,591 lines became five files: `studio-core.js` (helpers, VU
+ballistics, loudness), `studio-draw.js`, `studio-engine.js`, `studio-verdicts.js`,
+and `studio.js` keeping the 3,675 lines of wiring.
+
+Two measurements made this tractable where three earlier attempts failed.
+First, the file writes function bodies UNINDENTED, so a line-based scan
+reports 228 top-level declarations where there are 75 — any sed-driven tool
+built on indentation corrupts it. Second, only 31 declarations are referenced
+outside their own section, and the flow is one-directional.
+
+`tests/test_web_assets.py` landed BEFORE the split and catches the failure
+that killed the earlier attempts: two classic scripts declaring the same
+top-level name, where the second file silently never runs.
+
+Verified against a baseline captured before any change: 8 panels, 6 globals,
+80 widget keys, a +12 dB bell measuring +12.00 dB, the rack building the same
+four nodes, the EQ curve at exactly 2,709 lit pixels, zero console errors —
+identical on every measure.
+
+The original description follows, for the record.
+
+---
+
 
 5,591 lines holding four separable things: the audio engine and rack router,
 card layout and workspaces, the chat and its EQ routing, and transport and
@@ -338,4 +362,4 @@ tests and visible only on screen.
 | 2 | `src/` layout, `pyproject.toml`, `music` entry point | **done** (#4) |
 | 3 | thin `cli.py` | **done** (#5) |
 | 4 | `audio/` stops importing `insight/` | **done** (#5) |
-| 5 | split `studio.js` | not started |
+| 5 | split `studio.js` | **done** (#6) |

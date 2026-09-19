@@ -218,6 +218,15 @@ window.addEventListener('error', function (e) {
   if (/addEventListener|null/.test(String(e.message))) e.preventDefault();
 }, true);
 </script>
+<!-- Only the drawing half is needed here, but studio.js's boot() is what
+     the error swallower above is for, so load the same five files the app
+     does and let the wiring fail harmlessly on this page's missing elements.
+     The draw functions now live on window.__studio rather than as bare
+     globals, because each file is its own IIFE; see README.md. -->
+<script src="studio-core.js"></script>
+<script src="studio-draw.js"></script>
+<script src="studio-engine.js"></script>
+<script src="studio-verdicts.js"></script>
 <script src="studio.js"></script>
 <script>
 /* Build three bridges at different widths and drive them with a slow sweep, so
@@ -259,9 +268,9 @@ window.addEventListener('error', function (e) {
     const w = mBars ? Math.round(mBars.getBoundingClientRect().width) : 0;
     if (!w) return;
     try {
-      drawBars(mBars, [{ name: 'L', db: l, hold: l + 1.5 },
-                       { name: 'R', db: r, hold: r + 1.2 }], w);
-      drawCorrelation(mCorr, 0.65, w);
+      __studio.drawBars(mBars, [{ name: 'L', db: l, hold: l + 1.5 },
+                                { name: 'R', db: r, hold: r + 1.2 }], w);
+      __studio.drawCorrelation(mCorr, 0.65, w);
     } catch (err) { /* absent in this scratch page is not fatal */ }
   }
 
@@ -276,8 +285,8 @@ window.addEventListener('error', function (e) {
     const r = Math.min(3, swell + kick * 0.8 + Math.sin(t * 1.7) * 1.2);
     for (const c of cases) {
       try {
-        drawVu(c.L, 'Left', l, l > 1.5, c.dialW);
-        drawVu(c.R, 'Right', r, r > 1.5, c.dialW);
+        __studio.drawVu(c.L, 'Left', l, l > 1.5, c.dialW);
+        __studio.drawVu(c.R, 'Right', r, r > 1.5, c.dialW);
       } catch (err) { /* a size with no area simply skips */ }
     }
     drawMini(l, r);

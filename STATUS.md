@@ -33,7 +33,7 @@ python3.12 -m venv .venv && ./.venv/bin/pip install -e .   # first time
 ./.venv/bin/music studio <file.wav>                    # measure + report, one step
 ./.venv/bin/music serve <audio-dir>                    # the page, on 127.0.0.1:8770
 ./.venv/bin/music maximize <file> --preset loud        # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 382 tests
+./.venv/bin/python -m unittest discover -s tests -t .  # 686 tests, 90% covered
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -116,7 +116,7 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 382 tests total, all passing.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 686 tests total, all passing. Coverage 90%.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -221,39 +221,48 @@ the case; this is the index.
 8. **Gain-less filter types are active at gain 0.** A lowpass, highpass or
    notch does its work without gain; filtering bands on `b.gain` silently
    dropped them. See `activeEqBands` in `studio.js`.
-9. **The widgets are classic scripts in one IIFE, not modules.** `import` is
+9. **Every script shares one global scope.** The page is classic `<script>`
+    tags, not modules — `import` is blocked under `file://` and the page must
+    open by double-click. So a top-level `const clamp` in two files throws
+    `Identifier 'clamp' has already been declared` and the SECOND FILE NEVER
+    RUNS, with one console line as the only symptom. Splitting `studio.js`
+    failed three times on exactly this. `tests/test_web_assets.py` scans every
+    script by brace depth and fails on a duplicate. Note that `studio.js`
+    writes function bodies unindented, so a line-based scan is wrong: it
+    reports 228 top-level declarations where there are 75.
+10. **The widgets are classic scripts in one IIFE, not modules.** `import` is
    blocked on `file://` and the page must open from disk. See
    `widgets/README.md` for the load order.
-10. **Delivery targets live in `master.py` and travel in the analysis JSON.**
+11. **Delivery targets live in `master.py` and travel in the analysis JSON.**
     Nothing else should hardcode −14 LUFS / −1 dBTP.
-11. **`DynamicsCompressorNode` is not a limiter either.** The browser's version
+12. **`DynamicsCompressorNode` is not a limiter either.** The browser's version
     of invariant 1, measured independently: asked to hold −1.0 dBFS it let
     +0.38 dBFS through at 6 dB of drive and +1.195 dBFS at 12 dB — worse the
     harder it is pushed. The live maximizer is a delay (look-ahead) → a
     compressor (gain riding) → a hard-clipping `WaveShaper` (the actual
     ceiling). Remove the shaper and the ceiling stops being a ceiling.
-12. **Stereo width 1 must be bit-transparent.** The mid/side algebra is easy to
+13. **Stereo width 1 must be bit-transparent.** The mid/side algebra is easy to
     fold into fewer nodes and get subtly wrong: the first version turned a
     0.5/0.1 input into 0.525/0.075 at width 1, i.e. widened the signal while
     claiming to do nothing. Each gain is its own node, and the offline check
     asserts 0/1/2 → mono / transparent / doubled.
-13. **`audio/` must not import `insight/`.** Measurement cannot depend on
+14. **`audio/` must not import `insight/`.** Measurement cannot depend on
     interpretation: `insight/` is the only half that needs an API key and a
     network, so an import in that direction means a missing key stops the
     meters. The rule lived in a docstring and was false within a day —
     `analyze.py` imported `insight.timeline` for findings that were pure
     arithmetic all along. `tests/test_architecture.py` parses the package with
     `ast` and fails on a violation, including one hidden inside a function.
-14. **Each equaliser owns its own band list.** `window.StudioEq` is the first
+15. **Each equaliser owns its own band list.** `window.StudioEq` is the first
     panel's, `window.StudioEq2` is the second's, and neither may write the
     other. They are separate devices that cascade — a single shared list would
     make each panel overwrite the other's knob on its next publish, which
     looks like a knob that will not stay put rather than like a bug.
-15. **Only the first equaliser trims.** Auto gain compensation is computed for
+16. **Only the first equaliser trims.** Auto gain compensation is computed for
     the whole monitor path and applied once, before EQ 1's filters. A second
     trim on EQ 2 would attenuate twice and deliver a monitor quieter than the
     source, which reads as "the second EQ sounds wrong".
-16. **The rack is a router of `{input, output}` blocks.** A device that is not
+17. **The rack is a router of `{input, output}` blocks.** A device that is not
     patched is absent from the graph, not bypassed inside it. Keep new devices
     as blocks so back-panel cabling stays a change to the router alone.
 
@@ -294,7 +303,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from the repo root. 382, all passing. Keep it that way.
+  from the repo root. 686, all passing, 90% covered. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on

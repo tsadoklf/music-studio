@@ -6,7 +6,7 @@ Scaffolds `music new` copies. One file per template, named for what it makes:
 ```sh
 music new <slug> --channel <channel>          # uses song.md
 music new <slug> --channel <channel> --template song
-music new --list-templates
+music template list
 music new <slug> --channel <channel> --template ./my-own.md   # a path still works
 ```
 

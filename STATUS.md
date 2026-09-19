@@ -33,7 +33,7 @@ python3.12 -m venv .venv && ./.venv/bin/pip install -e .   # first time
 ./.venv/bin/music studio <file.wav>                    # measure + report, one step
 ./.venv/bin/music serve <audio-dir>                    # the page, on 127.0.0.1:8770
 ./.venv/bin/music maximize <file> --preset loud        # then `master` for the ceiling
-./.venv/bin/python -m unittest discover -s tests -t .  # 816 tests, 92% covered
+./.venv/bin/python -m unittest discover -s tests -t .  # 823 tests, 92% covered
 ```
 
 Python **3.12** or newer. ffmpeg and ffprobe on PATH. The page also opens
@@ -118,7 +118,7 @@ master by accident.
   MCP, and previewable live in the page.
 - **Tempo and key.** 99.4 BPM measured against the 100 BPM in the track's own
   `song.md`. Key reports low confidence on modal material rather than guessing.
-- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 816 tests total, all passing. Coverage 92%.
+- **Reports, timeline, advice, EQ translation, MCP, maximizer.** 823 tests total, all passing. Coverage 92%.
 - **The panel cannot drift from the CLI.** `tests/test_panel_presets.py` reads
   `RACK_DEFAULTS` and `RACK_PRESETS` out of the JavaScript with node and
   compares them field for field against `maximize.py`'s `Settings` and
@@ -171,7 +171,7 @@ Playback-time playhead motion; a 71 MB WAV through the waveform's peak pyramid;
 touch input; Safari and Firefox; audible output through speakers (signal flow
 and pixels were checked, not sound).
 
-`benchmarks/` is the beginning of an answer to the last one: `music benchmark`
+`benchmarks/` is the beginning of an answer to the last one: `music benchmark add`
 stores the measurements of records you trust, and `music scope --against` says
 how a take sits beside them. It needs references to be useful, and choosing
 those is a listening decision nobody else can make.
@@ -309,7 +309,7 @@ it straight to WebAudio.
 ## Working here
 
 - **Run the tests.** `./.venv/bin/python -m unittest discover -s tests -t .`
-  from the repo root. 816, all passing, 92% covered. Keep it that way.
+  from the repo root. 823, all passing, 92% covered. Keep it that way.
 - **Measure, do not assume.** Most of the bugs found here were invisible to the
   test that was supposed to catch them: a canvas that drew but was too small to
   read, a preset that emitted a chain nobody ran, a detector validated only on

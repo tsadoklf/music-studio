@@ -3,8 +3,8 @@
 Records to measure your own against. One JSON per record, a few hundred bytes.
 
 ```sh
-music benchmark --list
-music benchmark <a record you trust>.wav --add aja --note "Steely Dan, 1977."
+music benchmark list
+music benchmark add <a record you trust>.wav --as aja --note "Steely Dan, 1977."
 music scope <your take>.wav --against aja
 ```
 

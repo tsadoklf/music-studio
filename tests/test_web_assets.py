@@ -102,6 +102,56 @@ class TestNoGlobalCollisions(unittest.TestCase):
                          "classic scripts share one scope: the second "
                          "declaration throws and that whole file never runs")
 
+    def test_studio_files_stay_inside_their_iife(self):
+        """The studio half of the page, split out of one 5,591-line studio.js.
+        It used to declare 231 names at top-level script scope, several of
+        which widgets/*.js also declares with different bodies; the IIFE is
+        what removes that collision rather than dodging it."""
+        studio = [p for p in scripts_in_order() if p.parent == WEB]
+        self.assertGreaterEqual(len(studio), 5, "expected the five studio-*.js files")
+        for path in studio:
+            src = path.read_text(encoding="utf-8")
+            self.assertIn("(function (__S)", src,
+                          f"{path.name} is not wrapped in the namespace IIFE")
+            self.assertIn("window.__studio", src, path.name)
+
+    def test_the_two_namespaces_stay_separate(self):
+        """`__studio` and `__studioWidgets` are two transports for two sets of
+        files. Several names exist in both with different definitions, so
+        merging them would recreate the collision one level down."""
+        for path in scripts_in_order():
+            src = path.read_text(encoding="utf-8")
+            wrapper = ("(function (__W)" if path.parent.name == "widgets"
+                       else "(function (__S)")
+            self.assertIn(wrapper, src,
+                          f"{path.name} uses the wrong namespace wrapper")
+
+    def test_no_script_declares_anything_at_top_level(self):
+        """The strong form of the no-collision rule: not "no DUPLICATE top-level
+        name" but "no top-level name at all". Every file on the page is wrapped,
+        so a name that escapes is a bug in that file's IIFE, and it is the
+        collision surface that broke three earlier attempts at this split."""
+        for path in scripts_in_order():
+            names = top_level_names(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                names, set(),
+                f"{path.name} declares {sorted(names)[:8]} at top level; "
+                "everything must live inside the file's IIFE")
+
+    def test_studio_js_is_the_last_studio_file(self):
+        """cli.py injects the preloaded analysis immediately before the
+        `<script src="studio.js"` tag, and boot() must not run until those
+        globals are set — so studio.js has to come after the other four."""
+        studio = [p.name for p in scripts_in_order() if p.parent == WEB]
+        self.assertEqual(studio[0], "studio-core.js")
+        self.assertEqual(studio[-1], "studio.js")
+
+    def test_the_injection_marker_cli_looks_for_is_present(self):
+        """`cli.py` fails loudly if this string moves, but it fails at the
+        point a user asked for a scoped page. Catch it here instead."""
+        html = (WEB / "index.html").read_text(encoding="utf-8")
+        self.assertIn('<script src="studio.js"', html)
+
     def test_widgets_stay_inside_their_iife(self):
         """Every widget file wraps itself, which is what keeps its helpers out
         of the shared scope. A file that forgets is invisible until its names

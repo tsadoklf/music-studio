@@ -219,5 +219,72 @@ class TestCli(unittest.TestCase):
         self.assertEqual(bm.main(["--list"]), 0)
 
 
+class TestCliGrouping(unittest.TestCase):
+    """`music benchmark list` / `music benchmark add`.
+
+    The libraries are grouped and the track verbs are not, deliberately:
+    almost every command in this CLI takes a track, so a noun in front of
+    `master` or `scope` would swallow the whole tool and distinguish nothing.
+    A library has contents, so `list` and `add` mean something and the bare
+    group is a question rather than an action.
+    """
+
+    def setUp(self):
+        from typer.testing import CliRunner
+        self.runner = CliRunner()
+        self.tmp = Path(tempfile.mkdtemp())
+        patcher = unittest.mock.patch.object(bm, "library_dir",
+                                             return_value=self.tmp)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _invoke(self, argv):
+        from music_studio.cli import app
+        return self.runner.invoke(app, argv)
+
+    def test_the_bare_group_shows_its_subcommands(self):
+        out = self._invoke(["benchmark"]).stdout
+        self.assertIn("list", out)
+        self.assertIn("add", out)
+
+    def test_list_on_an_empty_library_says_how_to_add_one(self):
+        """An empty library is the normal first state; a dead end there is a
+        worse answer than a next step."""
+        result = self._invoke(["benchmark", "list"])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("benchmark add", result.stdout)
+
+    def test_list_shows_what_was_added(self):
+        bm.save("aja", _analysis(lra=11.0), note="the dynamics reference")
+        out = self._invoke(["benchmark", "list"]).stdout
+        self.assertIn("aja", out)
+        self.assertIn("11", out)
+        self.assertIn("dynamics reference", out)
+
+    def test_add_requires_a_name(self):
+        """--as is what --against later refers to, so it cannot be guessed."""
+        result = self._invoke(["benchmark", "add", "some.wav"])
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("--as", result.stdout + (result.stderr or ""))
+
+    def test_add_measures_the_file_and_saves_the_numbers(self):
+        with unittest.mock.patch("music_studio.audio.analyze.analyze",
+                                 return_value=_analysis(lra=11.0)) as analysed:
+            wav = self.tmp / "ref.wav"
+            wav.write_bytes(b"\0")
+            result = self._invoke(["benchmark", "add", str(wav), "--as", "ref"])
+        self.assertEqual(result.exit_code, 0, result.output)
+        analysed.assert_called_once()
+        self.assertEqual(bm.load("ref")["measures"]["lra"], 11.0)
+
+    def test_the_track_verbs_stayed_flat(self):
+        """The point of the grouping. If `master` ever needs a noun in front
+        of it, this test should be the thing that argues about it."""
+        from music_studio.cli import app
+        names = {c.name or c.callback.__name__ for c in app.registered_commands}
+        for verb in ("master", "scope", "compare", "video", "measure"):
+            self.assertIn(verb, names, f"`music {verb}` should stay one word")
+
+
 if __name__ == "__main__":
     unittest.main()

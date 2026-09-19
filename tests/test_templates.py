@@ -100,21 +100,40 @@ class TestTemplateContent(_Env):
 
 
 class TestListTemplates(_Env):
+    """`music template list`.
+
+    This was `music new --list-templates` until the libraries were grouped.
+    Listing what exists is a different act from scaffolding one, and hanging
+    it off `new` meant `new`'s two required arguments had to become optional
+    so the flag could run without them — which is a signal the flag was on
+    the wrong command.
+    """
+
     def test_it_lists_what_is_installed(self):
-        result = runner.invoke(app, ["new", "--list-templates"])
+        result = runner.invoke(app, ["template", "list"])
         self.assertEqual(result.exit_code, 0, result.output)
         for name in paths.templates():
             self.assertIn(name, result.stdout)
 
     def test_it_shows_a_description_not_frontmatter(self):
-        result = runner.invoke(app, ["new", "--list-templates"])
+        result = runner.invoke(app, ["template", "list"])
         self.assertNotIn("slug: <kebab", result.stdout)
 
-    def test_it_does_not_need_a_slug_or_a_channel(self):
-        """Both are otherwise required; listing must not demand them."""
-        result = runner.invoke(app, ["new", "--list-templates"])
-        self.assertEqual(result.exit_code, 0)
-        self.assertNotIn("Missing", result.stdout)
+    def test_the_bare_group_shows_what_it_can_do(self):
+        """`music template` alone is a question, not a mistake."""
+        result = runner.invoke(app, ["template"])
+        self.assertIn("list", result.stdout)
+
+    def test_new_still_requires_its_arguments(self):
+        """The flag is gone, so nothing forces slug and channel to be
+        optional any more — but they were left Optional in the signature and
+        are checked by hand, so this is worth pinning."""
+        for argv, missing in ((["new", "--channel", "x"], "SLUG"),
+                              (["new", "a-slug"], "--channel")):
+            with self.subTest(argv=argv):
+                result = runner.invoke(app, argv)
+                self.assertNotEqual(result.exit_code, 0)
+                self.assertIn(missing, result.stdout + (result.stderr or ""))
 
 
 class TestNewUsesTheLibrary(_Env):

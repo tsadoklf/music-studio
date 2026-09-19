@@ -44,6 +44,27 @@ app = typer.Typer(
     help="Mastering bench: scaffold, measure, master, compare, render, publish.",
 )
 
+# Sub-apps for the things that manage a LIBRARY rather than act on a track.
+#
+# The track verbs stay flat — `music master <track>`, `music scope <track>` —
+# because they are what a person types all day, and a noun in front of a verb
+# you type constantly is a tax with no return. Almost every command here takes
+# a track, so a `song` group would swallow the whole CLI and distinguish
+# nothing.
+#
+# A library is a different shape: it has contents, so `list` and `add` mean
+# something, and `music benchmark` alone is a question rather than an action.
+benchmark_app = typer.Typer(
+    no_args_is_help=True,
+    help="Records to measure your own against. Measurements only, never audio.",
+)
+template_app = typer.Typer(
+    no_args_is_help=True,
+    help="Scaffolds `music new` copies.",
+)
+app.add_typer(benchmark_app, name="benchmark")
+app.add_typer(template_app, name="template")
+
 log = logging.getLogger("music")
 
 
@@ -73,7 +94,7 @@ def _track_dir(track: Path) -> Path:
 
 
 def _template_summary(path: Path) -> str:
-    """One line describing a template, for --list-templates.
+    """One line describing a template, for `music template list`.
 
     The blockquote under the title, which is where these templates put their
     own one-liner. Frontmatter is skipped: showing `slug: <kebab-case...>` as
@@ -163,22 +184,14 @@ def new(
     title: Optional[str] = typer.Option(None, "--title", help="Display title. Defaults to the slug."),
     root: Path = typer.Option(Path("."), "--root", help="Channel root containing tracks/."),
     template: Optional[str] = typer.Option(None, "--template",
-                                           help="Template name (see --list-templates), or a path to one."),
-    list_templates: bool = typer.Option(False, "--list-templates",
-                                        help="Show the installed templates and exit."),
+                                           help="Template name (see `music template list`), or a path to one."),
 ) -> None:
-    """Scaffold a new track folder from a template."""
-    if list_templates:
-        found = paths.templates()
-        if not found:
-            _fail(f"No templates installed at {paths.templates_dir()}.")
-        typer.echo("Templates:")
-        for name, path in found.items():
-            typer.echo(f"  {name:<14} {_template_summary(path)[:56]}")
-        return
+    """Scaffold a new track folder from a template.
 
-    # Argument, not option, so Typer cannot enforce it once --list-templates
-    # makes it optional. Checked here instead, with the same wording Typer uses.
+    `music template list` shows what is installed.
+    """
+    # Both are required, but Typer cannot enforce an Argument that stayed
+    # Optional. Checked here, in Typer's own wording.
     if not slug:
         _fail("Missing argument 'SLUG'. Try 'music new --help'.")
     if not channel:
@@ -490,7 +503,7 @@ def scope(
     with_advice: bool = typer.Option(False, "--advise",
                                      help="Also ask a model what to do, and show it on the page."),
     against: Optional[str] = typer.Option(None, "--against",
-                                          help="Compare against a benchmark. See `music benchmark --list`."),
+                                          help="Compare against a benchmark. See `music benchmark list`."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """Analyse a track and write the JSON the studio page reads.
@@ -723,68 +736,75 @@ def publish(
     raise typer.Exit(ytpublish.main(argv))
 
 
-@app.command()
-def benchmark(
-    track: Optional[Path] = typer.Argument(None, help="Audio file or track directory to add."),
+def _benchmark_rows() -> list[str]:
+    """One line per benchmark, for `benchmark list`."""
+    from music_studio.insight.benchmark import available
+    rows = []
+    for name, path in available().items():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        m = data.get("measures", {})
+        lufs, lra = m.get("integrated_lufs"), m.get("lra")
+        bits = []
+        if lufs is not None:
+            bits.append(f"{lufs:+.1f} LUFS")
+        if lra is not None:
+            bits.append(f"LRA {lra:.1f}")
+        rows.append(f"  {name:<16} {', '.join(bits):<22} {data.get('note', '')[:44]}")
+    return rows
+
+
+@benchmark_app.command("list")
+def benchmark_list() -> None:
+    """Show the benchmarks you can compare against."""
+    from music_studio.insight.benchmark import library_dir
+    rows = _benchmark_rows()
+    if not rows:
+        typer.echo(f"No benchmarks in {library_dir()}.")
+        typer.echo("Add one:  music benchmark add <a record you trust>.wav --as <name>")
+        return
+    typer.echo("Benchmarks:")
+    for row in rows:
+        typer.echo(row)
+
+
+@benchmark_app.command("add")
+def benchmark_add(
+    track: Path = typer.Argument(..., help="Audio file or track directory to measure."),
+    name: str = typer.Option(..., "--as", help="What to call it. Used by --against."),
     audio: Optional[Path] = typer.Option(None, "--audio", help="Defaults to masters/master.wav."),
-    add: Optional[str] = typer.Option(None, "--add", help="Save this track as a benchmark under this name."),
-    note: str = typer.Option("", "--note", help="One line on what the benchmark is for."),
+    note: str = typer.Option("", "--note", help="One line on what this one is for."),
     title: Optional[str] = typer.Option(None, "--title", help="Display name. Defaults to the filename."),
-    list_them: bool = typer.Option(False, "--list", help="Show the installed benchmarks."),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
-    """Keep a library of records to measure your own against.
+    """Measure a record you trust and keep the numbers.
 
-    A delivery target says a track should sit near -14 LUFS. It cannot say
-    whether 7.5 LU of range is generous or mean — that question only has
-    answers relative to records that already work.
-
-    A benchmark is the MEASUREMENTS of such a record, a few hundred bytes. The
-    audio is neither stored nor needed, which is what makes a library of
-    commercial references possible at all.
-
-        music benchmark --list
-        music benchmark <a record you trust>.wav --add aja --note "..."
-        music scope <your take>.wav --against aja
+    The audio is not stored, referenced or needed — only its measurements,
+    a few hundred bytes. That is what makes a library of commercial
+    references possible at all.
     """
-    from music_studio.insight.benchmark import (BenchmarkError, available,
-                                                library_dir, save)
+    from music_studio.audio.analyze import AnalyzeError, analyze as _analyze
+    from music_studio.insight.benchmark import BenchmarkError, save
 
     _setup_logging(verbose)
-
-    if list_them or (track is None and not add):
-        found = available()
-        if not found:
-            typer.echo(f"No benchmarks in {library_dir()}.")
-            typer.echo("Add one:  music benchmark <a record you trust>.wav --add <name>")
-            return
-        typer.echo("Benchmarks:")
-        for name, path in found.items():
-            data = json.loads(path.read_text(encoding="utf-8"))
-            m = data.get("measures", {})
-            lufs, lra = m.get("integrated_lufs"), m.get("lra")
-            bits = []
-            if lufs is not None:
-                bits.append(f"{lufs:+.1f} LUFS")
-            if lra is not None:
-                bits.append(f"LRA {lra:.1f}")
-            typer.echo(f"  {name:<16} {', '.join(bits):<22} {data.get('note', '')[:44]}")
-        return
-
-    if not add:
-        _fail("--add <name> is required when adding. Use --list to see what exists.")
-
     src = _audio_for(track, audio)
-    from music_studio.audio.analyze import AnalyzeError, analyze as _analyze
     typer.echo(f"Analysing {src.name} …")
     try:
-        data = _analyze(src)
-        dst = save(add, data, note, title or src.stem)
+        dst = save(name, _analyze(src), note, title or src.stem)
     except (AnalyzeError, BenchmarkError) as exc:
         _fail(str(exc))
-
     _ok(f"Saved {dst}")
-    typer.echo(f"  music scope <your take> --against {add}")
+    typer.echo(f"  music scope <your take> --against {name}")
+
+
+@template_app.command("list")
+def template_list() -> None:
+    """Show the templates `music new` can scaffold from."""
+    found = paths.templates()
+    if not found:
+        _fail(f"No templates installed at {paths.templates_dir()}.")
+    typer.echo("Templates:")
+    for name, path in found.items():
+        typer.echo(f"  {name:<14} {_template_summary(path)[:56]}")
 
 
 @app.command()

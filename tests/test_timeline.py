@@ -10,12 +10,20 @@ No test reaches the network. The commentary layer at the bottom is exercised
 with `urlopen` patched, and what is asserted about it is mostly what it does
 when the model is unavailable: commentary is a bonus, and losing it must never
 lose a finding.
+
+That "bonus" framing is also what hid a bug these tests found: `add_comments`
+catches everything and logs "no commentary", so a NameError inside it looked
+exactly like being offline. COMMENT_SYSTEM had stayed in `audio.timeline`
+through the split and was never imported here, so `--comment` was a silent
+no-op on every machine. TestThePromptIsReachable is the guard against it
+recurring.
 """
 
 from __future__ import annotations
 
 import io
 import json
+import json as _json
 import tempfile
 import unittest
 import unittest.mock
@@ -212,18 +220,83 @@ class _Comments(unittest.TestCase):
         return out
 
 
+class TestThePromptIsReachable(unittest.TestCase):
+    """A regression guard for a bug this file found and that has since been
+    fixed.
+
+    `add_comments` wraps its whole body in `except Exception` and logs
+    "no commentary: <exc>". That is right for a dead endpoint — commentary is a
+    bonus and must not cost a finding — but it also means a programming error
+    inside the function is indistinguishable from being offline, and nothing on
+    screen says which.
+
+    The audio/insight split left COMMENT_SYSTEM defined in `audio.timeline` and
+    referenced, unimported, in `insight.timeline`. Every call raised NameError
+    where it builds the request, logged the same warning it logs when the
+    network is down, and returned the findings uncommented — so `--comment` was
+    a silent no-op on every machine, with or without a key, and the blanket
+    except is why nobody noticed.
+
+    The prompt now lives in `insight/`, which is also where it belongs: it is
+    text for a model, and `audio/` is the half that must work without one.
+    """
+
+    def test_the_prompt_lives_with_the_code_that_sends_it(self):
+        """The assertion that would have caught the original bug at once."""
+        self.assertTrue(hasattr(timeline, "COMMENT_SYSTEM"),
+                        "insight.timeline cannot see the prompt it sends; "
+                        "add_comments will raise NameError into its own "
+                        "except Exception and silently return uncommented "
+                        "findings")
+        self.assertIn("one short sentence per finding", timeline.COMMENT_SYSTEM)
+
+    def test_the_prompt_did_not_stay_behind_in_audio(self):
+        """audio/ must not carry model-facing text: it is the half that has to
+        work with no key and no network, and a prompt there is a standing
+        invitation to import the model layer back into it."""
+        self.assertFalse(hasattr(pure, "COMMENT_SYSTEM"),
+                         "the prompt is back in audio/ — it belongs in "
+                         "insight/, beside the code that sends it")
+
+    def test_a_good_reply_now_actually_produces_a_comment(self):
+        """The end-to-end proof. Before the fix this returned the findings
+        untouched while logging a warning that read like a network failure."""
+        from music_studio.insight import advise
+        with unittest.mock.patch.object(advise, "_load_env_key",
+                                        return_value="sk-test"), \
+                unittest.mock.patch(
+                    "urllib.request.urlopen",
+                    return_value=_reply([{"time_s": 62.0, "comment": "the chorus"}])):
+            out = timeline.add_comments(_items(), {"filename": "x.wav"})
+        self.assertEqual(out[0]["comment"], "the chorus")
+
+    def test_the_prompt_is_the_one_that_gets_sent(self):
+        """Not merely importable — actually used. A second copy defined locally
+        would satisfy the attribute check and still send the wrong rules."""
+        from music_studio.insight import advise
+        with unittest.mock.patch.object(advise, "_load_env_key",
+                                        return_value="sk-test"), \
+                unittest.mock.patch("urllib.request.urlopen",
+                                    return_value=_reply([])) as opened:
+            timeline.add_comments(_items(), {})
+        body = json.loads(opened.call_args[0][0].data.decode("utf-8"))
+        self.assertEqual(body["messages"][0]["content"], timeline.COMMENT_SYSTEM)
+
+
 class TestCommentaryAttachment(_Comments):
+    """Matching a model's sentences back onto the findings they describe."""
+
     def test_a_comment_lands_on_its_own_finding(self):
-        """Matched by timestamp, not by position: the model reorders, and a
+        """Matched by timestamp, not by position: a model reorders, and a
         positional match would put the peak's explanation on the hot section."""
-        out = self.comment([{"time_s": 150.0, "comment": "the snare hit"},
-                            {"time_s": 62.0, "comment": "the second chorus"}])
-        self.assertEqual(out[0]["comment"], "the second chorus")
-        self.assertEqual(out[1]["comment"], "the snare hit")
+        out = self.comment([{"time_s": 150.0, "comment": "the snare"},
+                            {"time_s": 62.0, "comment": "the chorus"}])
+        self.assertEqual(out[0]["comment"], "the chorus")
+        self.assertEqual(out[1]["comment"], "the snare")
 
     def test_a_near_miss_timestamp_still_matches(self):
-        """Times are rounded to a tenth on both sides, so a model echoing
-        62.04 back still finds its finding."""
+        """Rounded to a tenth on both sides, so a model echoing 62.04 back
+        still finds its finding instead of silently dropping the sentence."""
         out = self.comment([{"time_s": 62.04, "comment": "here"}])
         self.assertEqual(out[0]["comment"], "here")
 
@@ -243,8 +316,16 @@ class TestCommentaryAttachment(_Comments):
         self.assertNotIn("comment", out[0])
 
     def test_a_fenced_reply_is_unwrapped(self):
+        """Models fence JSON even when told not to, and the fence would make
+        json.loads fail on an otherwise perfect answer — which, inside the
+        blanket except, would look exactly like being offline."""
         out = self.comment('```json\n[{"time_s": 62.0, "comment": "fenced"}]\n```')
         self.assertEqual(out[0]["comment"], "fenced")
+
+    def test_junk_inside_a_valid_list_is_skipped_rather_than_fatal(self):
+        """One malformed entry must not cost the comments on either side."""
+        out = self.comment([None, "nonsense", {"time_s": 62.0, "comment": "kept"}])
+        self.assertEqual(out[0]["comment"], "kept")
 
     def test_the_findings_are_sent_to_the_model(self):
         """It is commenting on measurements it cannot otherwise see."""
@@ -267,10 +348,62 @@ class TestCommentaryAttachment(_Comments):
                          "Bearer sk-test")
 
 
+class TestOneBadRowIsNotFatal(_Comments):
+    """A malformed row must cost its own comment and nobody else's.
+
+    `add_comments` wraps its whole body in `except Exception`, which is right
+    for a dead endpoint but turns any error inside into a silent total loss.
+    Both loops that walk untrusted data therefore have to degrade per entry:
+    the reply from the model, and the findings going into the prompt.
+
+    Found while fixing a different bug in the same function — the version that
+    built `by_time` as one dict comprehension raised KeyError on the first row
+    without `time_s` and dropped every comment in the batch.
+    """
+
+    def test_a_reply_row_without_a_timestamp_is_skipped(self):
+        items = [{"time_s": 1.0, "time": "0:01", "severity": "warn", "title": "a"},
+                 {"time_s": 2.0, "time": "0:02", "severity": "ok", "title": "b"}]
+        out = self.comment(_json.dumps([
+            {"time_s": 1.0, "comment": "kept"},
+            {"no_time_s": True},                      # the poison row
+            {"time_s": 2.0, "comment": "also kept"},
+        ]), items=items)
+        self.assertEqual([i.get("comment") for i in out], ["kept", "also kept"])
+
+    def test_a_reply_row_with_an_unparseable_timestamp_is_skipped(self):
+        items = [{"time_s": 1.0, "time": "0:01", "severity": "warn", "title": "a"}]
+        out = self.comment(_json.dumps([
+            {"time_s": "half past two", "comment": "nonsense"},
+            {"time_s": 1.0, "comment": "kept"},
+        ]), items=items)
+        self.assertEqual(out[0].get("comment"), "kept")
+
+    def test_a_finding_missing_severity_still_gets_commented(self):
+        """The prompt is built with .get(): a finding short of one field is a
+        poorer line in the request, not a lost batch."""
+        items = [{"time_s": 1.0, "time": "0:01"}]          # no severity, no title
+        out = self.comment(_json.dumps([{"time_s": 1.0, "comment": "still here"}]),
+                           items=items)
+        self.assertEqual(out[0].get("comment"), "still here")
+
+    def test_a_reply_that_is_not_a_list_loses_nothing_but_comments(self):
+        items = [{"time_s": 1.0, "time": "0:01", "severity": "ok", "title": "a"}]
+        out = self.comment(_json.dumps({"comment": "an object, not a list"}),
+                           items=items)
+        self.assertEqual(len(out), 1)
+        self.assertNotIn("comment", out[0])
+
+
 class TestCommentaryIsOptional(_Comments):
     """The point of the whole split. A model that is missing, broken, slow or
     lying must cost you the sentence and nothing else — the findings are
-    arithmetic and were already correct before the call."""
+    arithmetic and were already correct before the call.
+
+    This property holds today and will still hold after the COMMENT_SYSTEM fix,
+    which is why these are the tests worth having while the bug stands: they
+    assert the contract (findings survive), not the route by which it is
+    currently, accidentally, satisfied."""
 
     def test_nothing_is_requested_when_there_is_nothing_to_comment_on(self):
         with unittest.mock.patch("urllib.request.urlopen") as opened:
@@ -303,6 +436,8 @@ class TestCommentaryIsOptional(_Comments):
             self.assertEqual(len(timeline.add_comments(items, {})), 2)
 
     def test_prose_instead_of_json_leaves_every_finding_intact(self):
+        """The most common model failure. json.loads raises into the same
+        except Exception, and the timeline comes back whole."""
         out = self.comment("Sure, here are my thoughts on your track!")
         self.assertEqual(len(out), 2)
         self.assertNotIn("comment", out[0])
@@ -312,11 +447,6 @@ class TestCommentaryIsOptional(_Comments):
         items = _items()
         with unittest.mock.patch("urllib.request.urlopen", return_value=body):
             self.assertEqual(len(timeline.add_comments(items, {})), 2)
-
-    def test_junk_inside_a_valid_list_is_skipped_rather_than_fatal(self):
-        """One malformed entry must not cost the comments on either side."""
-        out = self.comment([None, "nonsense", {"time_s": 62.0, "comment": "kept"}])
-        self.assertEqual(out[0]["comment"], "kept")
 
 
 class TestBuild(unittest.TestCase):

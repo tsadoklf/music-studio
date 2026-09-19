@@ -32,6 +32,27 @@ __all__ = ["add_comments", "build", "main", "find_events", "TimelineError",
            "ST_TOLERANCE", "MERGE_WINDOW", "MAX_FINDINGS"]
 
 
+# The prompt is here, not in audio/: it is text for a model, and audio/ is
+# the half that must work with no model at all. It followed find_events into
+# audio/ during the split and left add_comments raising NameError inside a
+# blanket except — commentary failed silently rather than loudly.
+COMMENT_SYSTEM = """\
+You are a mastering engineer annotating a timeline of one track. You are given \
+dated findings, each already measured. Write one short sentence per finding \
+saying what it means for the record — what a listener would notice, or what to \
+do about it.
+
+Rules:
+  * Never contradict a number you are given, and never invent one.
+  * You cannot hear the audio. Do not describe instruments, arrangement or mood.
+  * A codec cutoff cannot be undone with EQ. Never suggest it.
+  * Be specific and brief. One sentence. No preamble, no restating the title.
+
+Return JSON: a list of objects {"time_s": <the same value>, "comment": "..."} \
+in the same order, and nothing else.\
+"""
+
+
 def add_comments(items: list[dict], context: dict) -> list[dict]:
     """Ask a model for one sentence per finding. Failure leaves items unchanged."""
     if not items:
@@ -49,10 +70,13 @@ def add_comments(items: list[dict], context: dict) -> list[dict]:
         payload = {
             "track": context.get("filename"),
             "target_lufs": context.get("target_lufs"),
+            # .get(), not [], on every field: a finding missing one key is
+            # one poorer prompt line, whereas a KeyError here is caught by the
+            # blanket except below and costs the commentary on EVERY finding.
             "findings": [
-                {"time": i["time"], "time_s": i["time_s"],
-                 "severity": i["severity"], "title": i["title"]}
-                for i in items
+                {"time": i.get("time"), "time_s": i.get("time_s"),
+                 "severity": i.get("severity"), "title": i.get("title")}
+                for i in items if isinstance(i, dict)
             ],
         }
         body = _json.dumps({
@@ -78,8 +102,19 @@ def add_comments(items: list[dict], context: dict) -> list[dict]:
             text = text.split("\n", 1)[1] if text.startswith("json") else text
         comments = _json.loads(text)
 
-        by_time = {round(float(c["time_s"]), 1): c.get("comment", "")
-                   for c in comments if isinstance(c, dict)}
+        # Built entry by entry rather than as one comprehension. A model that
+        # returns a list with one malformed row in it used to cost the
+        # comments on every OTHER row too: the KeyError escaped into the
+        # blanket except and the whole batch was dropped.
+        by_time: dict[float, str] = {}
+        for c in comments if isinstance(comments, list) else []:
+            if not isinstance(c, dict):
+                continue
+            try:
+                when = round(float(c["time_s"]), 1)
+            except (KeyError, TypeError, ValueError):
+                continue
+            by_time[when] = c.get("comment", "")
         for item in items:
             c = by_time.get(round(item["time_s"], 1))
             if c:

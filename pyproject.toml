@@ -39,8 +39,10 @@ where = ["src"]
 # imports it, it must keep opening from file:// with no build step, and
 # paths.web_dir() is what finds it at run time.
 [tool.setuptools.package-data]
-"music_studio" = ["web/*.html", "web/*.css", "web/*.js", "web/widgets/*.js",
-                  "web/widgets/*.md", "web/widgets/mockups/*.html"]
+"music_studio" = ["web/*.html", "web/*.css", "web/*.js", "web/*.md",
+                  "web/widgets/*.js", "web/widgets/*.md",
+                  "web/widgets/mockups/*.html",
+                  "templates/*.md"]
 
 [tool.setuptools]
 include-package-data = true

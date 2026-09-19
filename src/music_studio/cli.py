@@ -72,6 +72,24 @@ def _track_dir(track: Path) -> Path:
     return track.parent if track.is_file() else track
 
 
+def _template_summary(path: Path) -> str:
+    """One line describing a template, for --list-templates.
+
+    The blockquote under the title, which is where these templates put their
+    own one-liner. Frontmatter is skipped: showing `slug: <kebab-case...>` as
+    a description tells a reader nothing about what the template is for.
+    """
+    body = path.read_text(encoding="utf-8").splitlines()
+    if body and body[0].strip() == "---":                 # skip the frontmatter
+        end = next((i for i, l in enumerate(body[1:], 1) if l.strip() == "---"), 0)
+        body = body[end + 1:]
+    for line in body:
+        line = line.strip()
+        if line.startswith(">"):
+            return line.lstrip("> ").strip()
+    return "(no summary)"
+
+
 def _audio_for(target: Path, audio: Path | None) -> Path:
     """Resolve what the user meant by `target` into one audio file.
 
@@ -139,13 +157,33 @@ def _pick_take(track_dir: Path) -> Path:
 
 @app.command()
 def new(
-    slug: str = typer.Argument(..., help="Kebab-case folder name, e.g. ida-y-vuelta."),
-    channel: str = typer.Option(..., "--channel", "-c", help="le-bal-musette | camille-marceau"),
+    slug: Optional[str] = typer.Argument(None, help="Kebab-case folder name, e.g. ida-y-vuelta."),
+    channel: Optional[str] = typer.Option(None, "--channel", "-c",
+                                          help="Channel slug the track belongs to."),
     title: Optional[str] = typer.Option(None, "--title", help="Display title. Defaults to the slug."),
     root: Path = typer.Option(Path("."), "--root", help="Channel root containing tracks/."),
-    template: Optional[Path] = typer.Option(None, "--template", help="Path to song-template.md."),
+    template: Optional[str] = typer.Option(None, "--template",
+                                           help="Template name (see --list-templates), or a path to one."),
+    list_templates: bool = typer.Option(False, "--list-templates",
+                                        help="Show the installed templates and exit."),
 ) -> None:
-    """Scaffold a new track folder from the song template."""
+    """Scaffold a new track folder from a template."""
+    if list_templates:
+        found = paths.templates()
+        if not found:
+            _fail(f"No templates installed at {paths.templates_dir()}.")
+        typer.echo("Templates:")
+        for name, path in found.items():
+            typer.echo(f"  {name:<14} {_template_summary(path)[:56]}")
+        return
+
+    # Argument, not option, so Typer cannot enforce it once --list-templates
+    # makes it optional. Checked here instead, with the same wording Typer uses.
+    if not slug:
+        _fail("Missing argument 'SLUG'. Try 'music new --help'.")
+    if not channel:
+        _fail("Missing option '--channel'. Try 'music new --help'.")
+
     if slug != slug.lower() or " " in slug or "_" in slug:
         _fail(f"'{slug}' should be kebab-case: lowercase, hyphens, no spaces.")
 
@@ -156,14 +194,27 @@ def new(
     for sub in ("masters/takes", "artwork", "video"):
         (track_dir / sub).mkdir(parents=True, exist_ok=True)
 
-    tpl = template or paths.song_template()
+    # A name resolves against the installed templates; anything that looks
+    # like a path is taken as one, so an ad-hoc template outside the package
+    # still works without installing it.
+    if template and (("/" in template) or template.endswith(".md")):
+        tpl = Path(template).expanduser()
+        if not tpl.is_file():
+            _fail(f"No template at {tpl}.")
+    elif template:
+        tpl = paths.song_template(template)
+        if tpl is None:
+            known = ", ".join(paths.templates()) or "none installed"
+            _fail(f"No template called {template!r}. Available: {known}.")
+    else:
+        tpl = paths.song_template()
     song = track_dir / "song.md"
     if tpl and tpl.is_file():
         text = tpl.read_text(encoding="utf-8")
         text = (text
                 .replace("<kebab-case-folder-name>", slug)
                 .replace("<Display title, accents and all>", title or slug.replace("-", " ").title())
-                .replace("<le-bal-musette | camille-marceau>", channel)
+                .replace("<channel-slug>", channel)
                 .replace("<YYYY-MM-DD>", date.today().isoformat(), 1))
         song.write_text(text, encoding="utf-8")
     else:
